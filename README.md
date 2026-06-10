@@ -29,7 +29,7 @@ npm run dev
 ## Plan de desarrollo (beta)
 
 - [x] **Fase 1 — Fundación:** repo, scaffold, design system
-- [ ] **Fase 2 — Datos:** esquema Postgres + RLS + seed
+- [x] **Fase 2 — Datos:** esquema Postgres + RLS + seed (ver [supabase/README.md](supabase/README.md))
 - [ ] **Fase 3 — Auth + Shell:** login, navegación por rol (RBAC)
 - [ ] **Fase 4 — Evaluación núcleo:** objetivos + autoevaluación funcional
 - [ ] **Fase 5 — Multi-fuente:** check-ins, peer feedback, revisión del facilitador
