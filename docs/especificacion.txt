@@ -1,0 +1,371 @@
+Construye una aplicación web llamada “Performance Hub” para gestionar evaluaciones de desempeño y conversaciones de feedback en una empresa con cultura horizontal, abierta, sincera y amable. El sistema debe facilitar retroalimentación oportuna, basada en evidencia, con foco en mejora continua y no solo en la evaluación anual. El producto debe minimizar burocracia, reducir sesgos, y hacer que el feedback sea accionable.
+
+1) Objetivos del producto
+
+Centralizar evaluaciones (trimestrales/semestrales) y check-ins mensuales.
+
+Evaluar desempeño con un modelo balanceado:
+
+Resultados (Qué logra) 40–50%
+
+Comportamientos/Valores (Cómo lo logra) 25–30%
+
+Habilidades del rol (Qué lo habilita) 15–20%
+
+Contribución al sistema (Más allá del rol) 10–15%
+
+Transformar comentarios en acuerdos y planes con seguimiento.
+
+Permitir evaluaciones multi-fuente (auto, líder/facilitador, pares y stakeholders).
+
+Incluir calibración (moderación) para consistencia y justicia.
+
+Mantener tono humano: feedback directo pero respetuoso (sin lenguaje agresivo).
+
+2) Roles y permisos (RBAC)
+
+Implementa roles con permisos claros:
+
+Admin (Talento Humano / People Ops)
+
+Configura ciclos, formularios, escalas, pesos, competencias.
+
+Gestiona usuarios, equipos, roles, estructuras.
+
+Define plantillas y preguntas.
+
+Ve dashboards globales y reportes.
+
+Puede abrir/cerrar ciclos, desbloquear formularios, exportar data.
+
+Manager / Facilitador
+
+Crea objetivos del ciclo con el colaborador.
+
+Da feedback, aprueba check-ins y evaluación final.
+
+Solicita feedback a pares/stakeholders.
+
+Ve reportes de su equipo y comparativos.
+
+Participa en calibración.
+
+Empleado
+
+Autoevaluación, evidencia, check-ins.
+
+Puede solicitar feedback a pares.
+
+Ve su historial y planes de desarrollo.
+
+Puede comentar y aceptar acuerdos.
+
+Peer/Stakeholder (Evaluador invitado)
+
+Solo puede completar feedback solicitado para un evaluado.
+
+Acceso limitado a lo necesario (principio de mínima exposición).
+
+3) Estructura del ciclo (workflow)
+
+Debe soportar ciclos Trimestrales (recomendado) y/o Semestrales.
+
+Estados del ciclo
+
+Draft (configuración)
+
+Open (recolección)
+
+Self-review
+
+Peer feedback
+
+Manager review
+
+1:1 Meeting (conversación)
+
+Calibration (opcional)
+
+Finalized (cierre)
+
+Archived
+
+Reglas
+
+Nadie ve el feedback de pares hasta que exista autoevaluación (opcional, configurable).
+
+Los pares pueden ser anónimos o nominados (configurable por ciclo).
+
+Los pesos por bloque se configuran por ciclo y/o por rol.
+
+El sistema debe permitir “cierre parcial”: si falta un peer, se cierra igual con marca de incompleto.
+
+4) Modelo de evaluación (contenido)
+
+Cada evaluación debe contener:
+
+4.1 Bloques y preguntas
+
+A) Resultados
+
+Lista de 3–5 objetivos (OKR o metas) con:
+
+Descripción
+
+Métrica / evidencia (link, ticket, doc)
+
+Peso por objetivo (suma 100% dentro del bloque)
+
+Resultado: escala 1–4
+
+Comentario basado en evidencia (obligatorio)
+
+B) Comportamientos
+
+4–6 comportamientos estándar (configurables):
+
+Colaboración
+
+Comunicación directa y respetuosa
+
+Accountability
+
+Orientación al cliente
+
+Aprendizaje/mejora continua
+
+Cada ítem con escala 1–4 + ejemplo observado (obligatorio).
+
+C) Habilidades del rol
+
+Set configurable por rol (p.ej., planeación, autonomía, criterio).
+
+Escala 1–4 + evidencia.
+
+D) Contribución al sistema
+
+Mejora de procesos, mentoría, documentación, reducción de fricción.
+
+Escala 1–4 + evidencia.
+
+4.2 Sección de “Reconocimiento” y “Feedforward”
+
+Reconocimiento: “Lo más valioso que aportaste este ciclo…”
+
+Feedforward: 2–3 acciones concretas para el próximo ciclo (obligatorio):
+
+Acción
+
+Indicador de éxito
+
+Fecha objetivo
+
+Responsable
+
+Check-in de seguimiento
+
+5) Escala de calificación (definiciones)
+
+Usar escala 1–4 con definiciones visibles:
+
+En desarrollo: requiere apoyo frecuente; inconsistencias.
+
+Cumple lo esperado: entrega lo acordado con autonomía básica.
+
+Sólido/Consistente: supera expectativas de forma repetida.
+
+Sobresaliente: impacto excepcional y eleva al equipo/sistema.
+
+Regla: no permitir guardar un “4” sin evidencia concreta.
+
+6) Check-ins mensuales (conversaciones rápidas)
+
+Un módulo de check-in mensual de 20–30 min:
+
+¿Qué lograste este mes? (hechos)
+
+¿Qué obstáculos tuviste? (bloqueos)
+
+¿En qué necesitas apoyo?
+
+Feedback rápido: “Continúa / Ajusta / Inicia”
+
+Actualización de objetivos (si cambian)
+
+Debe quedar registrado y alimentar la evaluación final (timeline).
+
+7) Calibración (moderación) – opcional pero clave
+
+Un módulo para People Ops/Managers:
+
+Vista de distribución de calificaciones por equipo/rol.
+
+Alertas de sesgo: “todos 3”, “demasiados 4”, diferencias extremas.
+
+Panel para discutir y ajustar calificación final (con log/auditoría).
+
+Campo “Racional de calibración” obligatorio si se cambia una nota.
+
+8) Evidencia y trazabilidad
+
+Cada comentario debería poder adjuntar:
+
+Links (Drive, Notion, Jira, GitHub, etc.)
+
+Archivos
+
+Referencias internas (IDs de tickets)
+
+Historial: mantener versiones y timestamps.
+
+Auditoría: quién cambió qué, cuándo, y por qué.
+
+9) Notificaciones y recordatorios
+
+Email + in-app:
+
+Apertura de ciclo
+
+Solicitud de feedback peer
+
+Recordatorios por vencimiento
+
+Confirmación de reunión 1:1
+
+Cierre del ciclo
+
+Configurable por Admin (frecuencia y plantillas).
+
+10) UX/UI (tono cultural)
+
+Redacción guiada: tips de feedback “directo y amable”.
+
+Validaciones para evitar adjetivos vagos:
+
+Si el comentario solo tiene “bien”, pedir ejemplo.
+
+Plantillas de frases sugeridas (no obligatorias).
+
+Diseño simple, rápido, mobile-friendly.
+
+11) Reportes y analítica (MVP + escalable)
+
+Para empleado
+
+Historial de ciclos
+
+Fortalezas recurrentes
+
+2–3 focos de mejora
+
+Plan de acciones con progreso
+
+Para manager
+
+Vista del equipo
+
+Mapa de riesgos: bajo desempeño sostenido, falta de feedback, objetivos sin evidencia
+
+Comparativos por bloque
+
+Para HR/Admin
+
+Distribuciones (por rol, equipo, bloque)
+
+Adopción (tasa de completitud)
+
+Calidad del feedback (porcentaje con evidencia)
+
+Export CSV/XLSX
+
+Privacidad: HR ve agregados; comentarios individuales solo con permisos.
+
+12) Requerimientos técnicos (propuesta)
+
+Elige stack moderno (propuesta, pero abierto):
+
+Front: React/Next.js + TypeScript
+
+Back: Node.js (NestJS/Express) o Python (Django/FastAPI)
+
+DB: Postgres
+
+Auth: SSO (Google/Microsoft) + JWT
+
+Storage: S3 compatible
+
+Email: SendGrid / SES
+
+Observabilidad: logs + auditoría
+
+13) Modelo de datos mínimo (entidades)
+
+User (id, name, email, role, team_id)
+
+Team (id, name, parent_team_id)
+
+Cycle (id, name, start, end, status, config_json)
+
+Template (id, blocks, items, weights)
+
+Objective (id, cycle_id, user_id, title, metric, weight, status)
+
+Review (id, cycle_id, evaluatee_id, reviewer_id, type: self/manager/peer, status)
+
+ReviewItem (id, review_id, block, item_id, score, comment, evidence_links[])
+
+CheckIn (id, user_id, date, notes, feedback, blockers, action_items[])
+
+Calibration (id, cycle_id, evaluatee_id, final_score, changes_log)
+
+ActionPlan (id, cycle_id, user_id, actions[])
+
+AuditLog (id, actor_id, entity, entity_id, before, after, timestamp)
+
+14) Reglas de negocio importantes
+
+No se puede cerrar un review sin:
+
+puntajes completos
+
+evidencia en ítems críticos (especialmente 4)
+
+2–3 acciones feedforward
+
+Peer reviews solo visibles cuando la fase lo permita.
+
+Anonimato opcional de peer feedback (config ciclo).
+
+Exportaciones solo Admin.
+
+Auditoría inmutable.
+
+15) Entregables del desarrollador (lo que espero)
+
+Arquitectura y diagrama de módulos
+
+Diseño DB (migraciones)
+
+API endpoints documentados (OpenAPI/Swagger)
+
+UI funcional completa del MVP
+
+Notificaciones básicas
+
+Reportes mínimos (equipo y persona)
+
+Tests básicos (auth + flujos principales)
+
+Seed data para demo
+
+16) Criterios de éxito del MVP
+
+Un ciclo de evaluación se puede configurar en <10 min.
+
+Un empleado puede completar autoevaluación en <20 min.
+
+Un manager puede cerrar evaluación en <30 min por persona.
+
+Al final siempre quedan acciones concretas y fechas.
+
+Trazabilidad completa y reducción de “feedback abstracto”.

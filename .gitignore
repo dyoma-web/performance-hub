@@ -1,0 +1,27 @@
+# Dependencias y builds
+node_modules/
+dist/
+dist-ssr/
+
+# Entornos y credenciales
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editores / SO
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Supabase local
+supabase/.temp/
+
+# Misc
+*.zip
+.claude/

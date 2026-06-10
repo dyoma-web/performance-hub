@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Manager Review &amp; Evidence | Performance Hub</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style type="text/tailwindcss">
+        :root {
+            --primary-teal: #16B79C;
+            --highlight-coral: #E36B5B;
+            --accent-mustard: #E9C456;
+            --bg-light: #fdfdfd;
+        }
+        @layer base {
+            .material-symbols-outlined {
+                font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+                vertical-align: middle;
+            }
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#16B79C",
+                        "highlight": "#E36B5B",
+                        "accent": "#E9C456",
+                        "background-light": "#fdfdfd",
+                        "background-dark": "#0f172a",
+                    },
+                    fontFamily: {
+                        "display": ["Manrope"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+<header class="bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 sticky top-0 z-30">
+<div class="max-w-[1440px] mx-auto px-6 py-4 flex items-center justify-between">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-white">insights</span>
+</div>
+<div>
+<h1 class="font-bold text-lg leading-tight">Performance Hub</h1>
+<p class="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider">Manager Review Cycle • Q3 2024</p>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 px-4 py-2 rounded-full border border-slate-200 dark:border-slate-700">
+<img alt="Employee" class="w-8 h-8 rounded-full border-2 border-primary" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDjy3quXAAiwUNo0Bnxt5agAvJHnG_xFHiqLOUtXwciFkhHfBM35ShFX4gGawycStUOFlkCkWQ-YZxYAhJLRyzt-IT21WkEXiwQ1dXaSXsn6p-K_4Xv1X7YswfdFAEMcjKiifUAkfKA0SbmKsACLuHOgUkubI4ZAn1ReOIBKYYwqiXl0nUn64U7F-Oh6hif_9-7N55eb1tDQ2k2OuX-pH6h9aBxafjLtcCsG--sRW5mtqS2HW137oGrp25BLxJIKK3-qwC95ELg66UT"/>
+<div>
+<p class="text-sm font-bold leading-none">Alex Rivera</p>
+<p class="text-[10px] text-slate-500 dark:text-slate-400 uppercase">Senior Product Designer</p>
+</div>
+</div>
+<button class="text-slate-400 hover:text-primary transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+</div>
+</div>
+</header>
+<main class="flex-1 max-w-[1440px] mx-auto w-full flex overflow-hidden">
+<section class="w-[70%] p-8 overflow-y-auto border-r border-slate-200 dark:border-slate-800">
+<div class="flex items-end gap-1 mb-10 border-b border-slate-100 dark:border-slate-800 overflow-x-auto pb-1">
+<button class="group flex flex-col items-center px-8 py-4 border-b-4 border-primary text-primary font-bold transition-all min-w-[140px]">
+<span class="text-sm">Results</span>
+<span class="text-[10px] opacity-70">40% Weight</span>
+</button>
+<button class="group flex flex-col items-center px-8 py-4 border-b-4 border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all min-w-[140px]">
+<span class="text-sm">Behaviors</span>
+<span class="text-[10px] opacity-70">30% Weight</span>
+</button>
+<button class="group flex flex-col items-center px-8 py-4 border-b-4 border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all min-w-[140px]">
+<span class="text-sm">Role Skills</span>
+<span class="text-[10px] opacity-70">20% Weight</span>
+</button>
+<button class="group flex flex-col items-center px-8 py-4 border-b-4 border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all min-w-[140px]">
+<span class="text-sm">Contribution</span>
+<span class="text-[10px] opacity-70">10% Weight</span>
+</button>
+</div>
+<div class="mb-8 p-6 bg-primary/5 dark:bg-primary/10 rounded-2xl border border-primary/10">
+<h2 class="text-2xl font-extrabold mb-2 text-slate-800 dark:text-white">Results &amp; Objectives</h2>
+<p class="text-slate-600 dark:text-slate-400 text-sm max-w-2xl leading-relaxed">Evaluate the key performance objectives set at the start of the quarter. Use the evidence sidebar on the right to reference specific achievements and feedback.</p>
+</div>
+<div class="bg-white dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 p-8 mb-8 shadow-sm">
+<div class="flex justify-between items-start mb-8">
+<div class="flex gap-5">
+<div class="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center text-accent">
+<span class="material-symbols-outlined text-3xl">flag</span>
+</div>
+<div>
+<h3 class="font-bold text-xl">Scale Design System Adoption</h3>
+<p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Target: 85% component coverage across mobile and web products.</p>
+</div>
+</div>
+<div class="relative group cursor-help">
+<span class="material-symbols-outlined text-slate-300">info</span>
+<div class="absolute right-0 top-10 w-64 p-4 bg-slate-900 text-white text-[11px] rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 shadow-2xl leading-normal border border-white/10">
+<p class="font-bold mb-2 border-b border-white/20 pb-1">Rating Definitions</p>
+<p class="mb-1.5"><strong class="text-highlight">1: Below</strong> - Did not meet targets.</p>
+<p class="mb-1.5"><strong class="text-accent">2: Approaching</strong> - Near miss on targets.</p>
+<p class="mb-1.5"><strong class="text-primary">3: Meeting</strong> - Consistently hit targets.</p>
+<p><strong class="text-primary">4: Exceeding</strong> - Significant over-delivery.</p>
+</div>
+</div>
+</div>
+<div class="mb-10">
+<p class="text-xs font-bold uppercase text-slate-400 mb-4 tracking-widest">Select Rating</p>
+<div class="grid grid-cols-4 gap-4">
+<button class="py-4 px-4 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold hover:border-primary/50 transition-all flex items-center justify-center gap-2 bg-white dark:bg-slate-800">
+<span class="w-6 h-6 rounded-full border-2 border-slate-200 flex items-center justify-center text-[11px]">1</span> Below
+                    </button>
+<button class="py-4 px-4 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold hover:border-primary/50 transition-all flex items-center justify-center gap-2 bg-white dark:bg-slate-800">
+<span class="w-6 h-6 rounded-full border-2 border-slate-200 flex items-center justify-center text-[11px]">2</span> Approaching
+                    </button>
+<button class="py-4 px-4 border-2 border-primary bg-primary/5 text-slate-900 dark:text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-sm">
+<span class="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-[11px]">3</span> Meeting
+                    </button>
+<button class="py-4 px-4 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold hover:border-primary/50 transition-all flex items-center justify-center gap-2 bg-white dark:bg-slate-800">
+<span class="w-6 h-6 rounded-full border-2 border-slate-200 flex items-center justify-center text-[11px]">4</span> Exceeding
+                    </button>
+</div>
+</div>
+<div>
+<div class="flex justify-between items-center mb-3">
+<label class="text-xs font-bold uppercase text-slate-400 tracking-widest">Evidence &amp; Comments <span class="text-highlight">*</span></label>
+<button class="text-primary text-xs font-bold flex items-center gap-1 hover:underline">
+<span class="material-symbols-outlined text-sm">link</span> Attach Docs/Jira
+                    </button>
+</div>
+<textarea class="w-full min-h-[140px] bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-5 text-sm focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all resize-none" placeholder="Be specific and kind. Add links to Jira or Docs to support this rating..."></textarea>
+<div class="mt-3 flex items-center gap-2 text-[12px] text-slate-500 italic bg-accent/5 p-3 rounded-lg border border-accent/10">
+<span class="material-symbols-outlined text-accent text-sm">tips_and_updates</span>
+                    Nudge: Alex received praise for the 'V2 Button Component' library in the July timeline.
+                </div>
+</div>
+</div>
+<div class="bg-white dark:bg-slate-900/50 rounded-2xl border border-slate-200 dark:border-slate-800 p-8 mb-6 shadow-sm opacity-90">
+<div class="flex justify-between items-start mb-8">
+<div class="flex gap-5">
+<div class="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center text-accent">
+<span class="material-symbols-outlined text-3xl">rocket_launch</span>
+</div>
+<div>
+<h3 class="font-bold text-xl">Productivity &amp; Output</h3>
+<p class="text-sm text-slate-500 dark:text-slate-400 mt-1">Average velocity of 12 points per sprint with &lt;5% rework.</p>
+</div>
+</div>
+</div>
+<div class="mb-10">
+<p class="text-xs font-bold uppercase text-slate-400 mb-4 tracking-widest">Select Rating</p>
+<div class="grid grid-cols-4 gap-4">
+<button class="py-4 px-4 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold hover:border-primary/50 transition-all bg-white dark:bg-slate-800">1</button>
+<button class="py-4 px-4 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold hover:border-primary/50 transition-all bg-white dark:bg-slate-800">2</button>
+<button class="py-4 px-4 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold hover:border-primary/50 transition-all bg-white dark:bg-slate-800">3</button>
+<button class="py-4 px-4 border-2 border-primary bg-primary/5 text-slate-900 dark:text-white rounded-xl text-sm font-bold shadow-sm">4</button>
+</div>
+</div>
+<div>
+<div class="flex justify-between items-center mb-3">
+<label class="text-xs font-bold uppercase text-slate-400 tracking-widest">Evidence &amp; Comments <span class="text-highlight">*</span></label>
+</div>
+<textarea class="w-full min-h-[140px] bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-5 text-sm focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all resize-none" placeholder="Explain why Alex exceeded expectations...">Alex's velocity has been remarkably consistent. During the checkout redesign, they handled 18 points in a single sprint to meet the stakeholder deadline without sacrificing quality.</textarea>
+</div>
+</div>
+<div class="h-20"></div>
+</section>
+<section class="w-[30%] bg-slate-50/50 dark:bg-slate-950/20 flex flex-col">
+<div class="p-6 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+<div class="flex items-center justify-between mb-5">
+<h3 class="font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">history</span> Evidence Timeline
+                </h3>
+<button class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-xl">filter_list</span>
+</button>
+</div>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+<input class="w-full pl-10 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-xl text-xs focus:ring-2 focus:ring-primary outline-none" placeholder="Search milestones, feedback..." type="text"/>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto p-6 relative">
+<div class="absolute left-9 top-0 bottom-0 w-[2px] bg-slate-200 dark:bg-slate-800"></div>
+<div class="relative pl-10 mb-8">
+<div class="absolute left-1 top-0 w-5 h-5 rounded-full bg-primary border-4 border-slate-50 dark:border-[#0f172a] z-10 shadow-sm"></div>
+<div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<div class="flex justify-between items-start mb-3">
+<span class="text-[10px] font-extrabold text-primary uppercase tracking-wider">Peer Feedback</span>
+<span class="text-[10px] text-slate-400">Aug 14</span>
+</div>
+<p class="text-xs text-slate-600 dark:text-slate-300 italic mb-4 leading-relaxed">"Alex's help on the mobile navigation was critical. They stayed late to ensure the tokens matched the spec."</p>
+<div class="flex items-center gap-2 pt-3 border-t border-slate-50 dark:border-slate-800">
+<img alt="Jordan" class="w-6 h-6 rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD0HVhqcj3PBPQc2lBX093u9MN-plWknLbhLavuEEr7Dk__K3q6tWECJmAG3PtB7x3Rb7V2sAxmG6zyYoHY3sG3K2_GMG2msdEiCerjriZpvHsSu4B8zNNXa8nbdgTPvd8UC_zTLzYTYC8OTTR95exz_d2PrAaJoNMQz0-MzTzY1jUmE9SQg5j7o39vAGIq8w3cSJZAnksFi5pXHlX-GIvO8aau_pek9mhCCUyk76t5vLrjH0_gEFmbvPJPHoQkppIzNhe_ZXP7_LDP"/>
+<span class="text-[10px] text-slate-500 font-bold uppercase tracking-tight">Jordan (Engineer)</span>
+</div>
+</div>
+</div>
+<div class="relative pl-10 mb-8">
+<div class="absolute left-1 top-0 w-5 h-5 rounded-full bg-blue-400 border-4 border-slate-50 dark:border-[#0f172a] z-10 shadow-sm"></div>
+<div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<div class="flex justify-between items-start mb-3">
+<span class="text-[10px] font-extrabold text-blue-500 uppercase tracking-wider">Jira Activity</span>
+<span class="text-[10px] text-slate-400">July 28</span>
+</div>
+<p class="text-[11px] font-bold mb-1">PROD-102: Design Audit Refactor</p>
+<p class="text-xs text-slate-500">Status changed to <span class="bg-primary/10 text-primary dark:bg-primary/20 px-2 py-0.5 rounded text-[10px] font-bold uppercase">Done</span>. Impact: Increased system performance by 12%.</p>
+</div>
+</div>
+<div class="relative pl-10 mb-8">
+<div class="absolute left-1 top-0 w-5 h-5 rounded-full bg-primary border-4 border-slate-50 dark:border-[#0f172a] z-10 shadow-sm"></div>
+<div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<div class="flex justify-between items-start mb-3">
+<span class="text-[10px] font-extrabold text-primary uppercase tracking-wider">Manager 1:1 Note</span>
+<span class="text-[10px] text-slate-400">July 05</span>
+</div>
+<p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">Discussed career growth path towards Senior Lead. Alex expressed interest in mentoring junior designers.</p>
+</div>
+</div>
+<div class="relative pl-10 mb-8">
+<div class="absolute left-1 top-0 w-5 h-5 rounded-full bg-accent border-4 border-slate-50 dark:border-[#0f172a] z-10 shadow-sm"></div>
+<div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+<div class="flex justify-between items-start mb-3">
+<span class="text-[10px] font-extrabold text-accent uppercase tracking-wider">Milestone</span>
+<span class="text-[10px] text-slate-400">June 21</span>
+</div>
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-accent text-sm">stars</span>
+<p class="text-[11px] font-bold">1 Year Anniversary!</p>
+</div>
+<p class="text-[10px] text-slate-500 mt-1 italic">Celebrating a year of excellence with the design team.</p>
+</div>
+</div>
+</div>
+</section>
+</main>
+<footer class="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 p-5 z-40">
+<div class="max-w-[1440px] mx-auto flex items-center justify-between">
+<div class="flex items-center gap-6">
+<div class="flex -space-x-3">
+<div class="w-10 h-10 rounded-full border-4 border-white dark:border-slate-900 bg-primary flex items-center justify-center text-[12px] font-bold text-white shadow-sm">1</div>
+<div class="w-10 h-10 rounded-full border-4 border-white dark:border-slate-900 bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[12px] text-slate-400">2</div>
+<div class="w-10 h-10 rounded-full border-4 border-white dark:border-slate-900 bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[12px] text-slate-400">3</div>
+<div class="w-10 h-10 rounded-full border-4 border-white dark:border-slate-900 bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[12px] text-slate-400">4</div>
+</div>
+<p class="text-xs text-slate-500 font-medium">1 of 4 sections completed • <span class="text-primary font-bold italic">Auto-saved 2 mins ago</span></p>
+</div>
+<div class="flex items-center gap-4">
+<button class="px-8 py-3 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                Save Draft
+            </button>
+<button class="bg-primary hover:brightness-110 text-white px-10 py-3 rounded-xl text-sm font-extrabold flex items-center gap-3 shadow-xl shadow-primary/20 transition-all active:scale-95">
+                Submit Review <span class="material-symbols-outlined text-sm">send</span>
+</button>
+</div>
+</div>
+</footer>
+
+</body></html>
