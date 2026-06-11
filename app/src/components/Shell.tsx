@@ -17,6 +17,7 @@ function navItems(role: Role): NavItem[] {
   if (role === 'colaborador') {
     return [
       ...base,
+      { to: '/objetivos', icon: 'flag', label: 'Mis Objetivos' },
       { to: '/mi-evaluacion', icon: 'rate_review', label: 'Mi Evaluación' },
       { to: '/check-in', icon: 'event_available', label: 'Check-in Mensual' },
       { to: '/mi-desarrollo', icon: 'trending_up', label: 'Mi Desarrollo' },

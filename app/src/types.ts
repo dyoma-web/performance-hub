@@ -44,3 +44,61 @@ export interface Team {
   name: string
   parent_team_id: string | null
 }
+
+export interface Objective {
+  id: string
+  cycle_id: string
+  user_id: string
+  title: string
+  metric: string
+  weight: number
+  progress: number
+  status: 'in-progress' | 'completed' | 'at-risk' | 'dropped'
+  evidence_links: string[]
+}
+
+export type ReviewType = 'self' | 'facilitator' | 'peer' | 'stakeholder'
+export type ReviewStatus = 'requested' | 'draft' | 'submitted' | 'declined'
+export type Block = 'results' | 'behaviors' | 'skills' | 'contribution'
+
+export interface Review {
+  id: string
+  cycle_id: string
+  evaluatee_id: string
+  reviewer_id: string
+  type: ReviewType
+  status: ReviewStatus
+  anonymous: boolean
+  recognition: string | null
+  submitted_at: string | null
+}
+
+export interface ReviewItem {
+  id?: string
+  review_id: string
+  block: Block
+  item_ref: string
+  score: number | null
+  comment: string | null
+  evidence_links: string[]
+}
+
+export interface FeedforwardItem {
+  id?: string
+  review_id: string
+  action: string
+  indicator: string
+  due_date: string | null
+  responsible_id: string | null
+}
+
+export interface CatalogItem {
+  id: string
+  kind: 'behavior' | 'skill' | 'contribution'
+  key: string
+  role_type: string | null
+  name: string
+  description: string
+  sort_order: number
+  is_active: boolean
+}

@@ -3,6 +3,8 @@ import { useAuth } from './context/AuthContext'
 import Shell from './components/Shell'
 import Login from './views/Login'
 import Dashboard from './views/Dashboard'
+import Objectives from './views/Objectives'
+import SelfReview from './views/SelfReview'
 import Placeholder from './views/Placeholder'
 import type { ReactNode } from 'react'
 
@@ -41,7 +43,8 @@ export default function App() {
       >
         <Route path="/" element={<Dashboard />} />
         {/* Colaborador */}
-        <Route path="/mi-evaluacion" element={<Placeholder title="Mi Evaluación" phase={4} />} />
+        <Route path="/objetivos" element={<Objectives />} />
+        <Route path="/mi-evaluacion" element={<SelfReview />} />
         <Route path="/check-in" element={<Placeholder title="Check-in Mensual" phase={5} />} />
         <Route path="/mi-desarrollo" element={<Placeholder title="Mi Desarrollo" phase={6} />} />
         {/* Facilitador */}
