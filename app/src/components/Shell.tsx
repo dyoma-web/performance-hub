@@ -18,6 +18,7 @@ function navItems(role: Role): NavItem[] {
     { to: '/mi-perfil', icon: 'person', label: 'Mi Perfil' },
     { to: '/trayectoria', icon: 'history_edu', label: 'Mi Trayectoria' },
     { to: '/competencias', icon: 'radar', label: 'Competencias' },
+    { to: '/organigrama', icon: 'lan', label: 'Organigrama' },
   ]
   if (role === 'colaborador') {
     return [
