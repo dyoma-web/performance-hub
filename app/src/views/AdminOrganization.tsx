@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { useToast } from '../components/Toast'
@@ -46,19 +46,17 @@ export default function AdminOrganization() {
   const [posUsage, setPosUsage] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
 
-  // formularios de creación
   const [areaForm, setAreaForm] = useState({ name: '', description: '', parent_area_id: '', lead_id: '' })
   const [posForm, setPosForm] = useState({ name: '', level: 2, description: '' })
   const [teamForm, setTeamForm] = useState({ name: '', description: '', area_id: '' })
   const [invForm, setInvForm] = useState(EMPTY_INV)
 
-  // edición en línea (una entidad a la vez)
   const [editing, setEditing] = useState<{ kind: 'area' | 'pos' | 'team'; id: string } | null>(null)
   const [editForm, setEditForm] = useState<Record<string, string | number>>({})
 
-  // eliminación de área con reasignación
   const [deletingArea, setDeletingArea] = useState<string | null>(null)
   const [reassign, setReassign] = useState<Record<string, string>>({})
+  const [collapsedAreas, setCollapsedAreas] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     Promise.all([
@@ -89,6 +87,84 @@ export default function AdminOrganization() {
   const areaMembers = (id: string) => profiles.filter((p) => p.area_id === id)
   const teamMembers = (id: string) => profiles.filter((p) => p.team_id === id)
 
+  // ---------- árbol de áreas ----------
+  const childAreas = (pid: string | null) =>
+    areas
+      .filter((a) => (a.parent_area_id ?? null) === pid)
+      .sort((x, y) => x.sort_order - y.sort_order || x.name.localeCompare(y.name))
+
+  function isDescendant(candidate: string, areaId: string): boolean {
+    let cur: string | null = candidate
+    let i = 0
+    while (cur && i < 20) {
+      if (cur === areaId) return true
+      cur = areas.find((a) => a.id === cur)?.parent_area_id ?? null
+      i++
+    }
+    return false
+  }
+
+  async function applyAreaUpdates(updates: { id: string; sort_order?: number; parent_area_id?: string | null }[]) {
+    for (const u of updates) {
+      const patch: Record<string, unknown> = {}
+      if (u.sort_order !== undefined) patch.sort_order = u.sort_order
+      if ('parent_area_id' in u) patch.parent_area_id = u.parent_area_id
+      const { error } = await supabase.from('areas').update(patch).eq('id', u.id)
+      if (error) return void toast(error.message, 'error')
+    }
+    setAreas((prev) =>
+      prev.map((a) => {
+        const u = updates.find((x) => x.id === a.id)
+        if (!u) return a
+        return {
+          ...a,
+          sort_order: u.sort_order ?? a.sort_order,
+          parent_area_id: 'parent_area_id' in u ? (u.parent_area_id ?? null) : a.parent_area_id,
+        }
+      })
+    )
+  }
+
+  function moveSibling(a: Area, dir: -1 | 1) {
+    const siblings = childAreas(a.parent_area_id ?? null)
+    const idx = siblings.findIndex((x) => x.id === a.id)
+    const swapIdx = idx + dir
+    if (swapIdx < 0 || swapIdx >= siblings.length) return
+    const order = [...siblings]
+    ;[order[idx], order[swapIdx]] = [order[swapIdx], order[idx]]
+    void applyAreaUpdates(order.map((x, i) => ({ id: x.id, sort_order: i })))
+  }
+
+  function promoteArea(a: Area) {
+    if (!a.parent_area_id) return
+    const parent = areas.find((x) => x.id === a.parent_area_id)!
+    const newSiblings = childAreas(parent.parent_area_id ?? null).filter((x) => x.id !== a.id)
+    const parentIdx = newSiblings.findIndex((x) => x.id === parent.id)
+    const order = [...newSiblings.slice(0, parentIdx + 1), a, ...newSiblings.slice(parentIdx + 1)]
+    void applyAreaUpdates(
+      order.map((x, i) =>
+        x.id === a.id ? { id: x.id, sort_order: i, parent_area_id: parent.parent_area_id ?? null } : { id: x.id, sort_order: i }
+      )
+    )
+  }
+
+  function demoteArea(a: Area) {
+    const siblings = childAreas(a.parent_area_id ?? null)
+    const idx = siblings.findIndex((x) => x.id === a.id)
+    if (idx <= 0) {
+      toast('Para bajar de nivel necesita un área hermana encima (de la que dependerá)', 'warning')
+      return
+    }
+    const newParent = siblings[idx - 1]
+    void applyAreaUpdates([{ id: a.id, parent_area_id: newParent.id, sort_order: childAreas(newParent.id).length }])
+    setCollapsedAreas((prev) => {
+      const next = new Set(prev)
+      next.delete(newParent.id)
+      return next
+    })
+  }
+
+  // ---------- edición genérica ----------
   function startEdit(kind: 'area' | 'pos' | 'team', id: string) {
     setDeletingArea(null)
     if (kind === 'area') {
@@ -133,7 +209,7 @@ export default function AdminOrganization() {
     toast('✓ Cambios guardados (auditados)')
   }
 
-  // ---------- ÁREAS ----------
+  // ---------- áreas CRUD ----------
   async function addArea() {
     if (areaForm.name.trim().length < 2) return void toast('Nombre del área requerido', 'warning')
     const { data, error } = await supabase
@@ -143,7 +219,7 @@ export default function AdminOrganization() {
         description: areaForm.description.trim() || null,
         parent_area_id: areaForm.parent_area_id || null,
         lead_id: areaForm.lead_id || null,
-        sort_order: areas.length,
+        sort_order: childAreas(areaForm.parent_area_id || null).length,
       })
       .select().single()
     if (error) return void toast(error.message, 'error')
@@ -156,7 +232,7 @@ export default function AdminOrganization() {
     setEditing(null)
     const members = areaMembers(id)
     if (members.length === 0) {
-      if (!window.confirm('¿Eliminar esta área? No tiene personas asignadas.')) return
+      if (!window.confirm('¿Eliminar esta área? No tiene personas asignadas. Las subáreas pasarán a la raíz.')) return
       void performDeleteArea(id)
       return
     }
@@ -185,7 +261,7 @@ export default function AdminOrganization() {
     toast('✓ Área eliminada y personas reasignadas')
   }
 
-  // ---------- CARGOS ----------
+  // ---------- cargos CRUD ----------
   async function addPosition() {
     if (posForm.name.trim().length < 2) return void toast('Nombre del cargo requerido', 'warning')
     const { data, error } = await supabase
@@ -217,7 +293,7 @@ export default function AdminOrganization() {
     toast('Cargo eliminado')
   }
 
-  // ---------- EQUIPOS ----------
+  // ---------- equipos CRUD ----------
   async function addTeam() {
     if (teamForm.name.trim().length < 2) return void toast('Nombre del equipo requerido', 'warning')
     const { data, error } = await supabase
@@ -243,7 +319,7 @@ export default function AdminOrganization() {
     toast('✓ Equipo eliminado — integrantes sin equipo')
   }
 
-  // ---------- INVITACIONES ----------
+  // ---------- invitaciones ----------
   async function invite() {
     if (!/^\S+@\S+\.\S+$/.test(invForm.email.trim())) return void toast('Email inválido', 'warning')
     const { data, error } = await supabase
@@ -277,18 +353,161 @@ export default function AdminOrganization() {
   }
 
   const input = 'rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-primary/30 focus:outline-none'
-  const iconBtn = 'rounded-lg p-2 text-slate-400 hover:bg-slate-100'
+  const iconBtn = 'rounded-lg p-1.5 text-slate-400 hover:bg-slate-100'
 
   const editButtons = (
     <div className="mt-3 flex gap-2">
-      <button onClick={saveEdit} className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white hover:brightness-105">
-        Guardar
-      </button>
-      <button onClick={() => setEditing(null)} className="rounded-xl px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100">
-        Cancelar
-      </button>
+      <button onClick={saveEdit} className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white hover:brightness-105">Guardar</button>
+      <button onClick={() => setEditing(null)} className="rounded-xl px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100">Cancelar</button>
     </div>
   )
+
+  // ---------- árbol de áreas: render recursivo con numeración ----------
+  function renderAreaTree(parentId: string | null, prefix: string): ReactNode[] {
+    return childAreas(parentId).flatMap((a, i) => {
+      const num = prefix ? `${prefix}.${i + 1}` : `${i + 1}`
+      const depth = prefix ? prefix.split('.').length : 0
+      const kids = childAreas(a.id)
+      const isCollapsed = collapsedAreas.has(a.id)
+      const members = areaMembers(a.id)
+      const isDeleting = deletingArea === a.id
+      const isEditing = editing?.kind === 'area' && editing.id === a.id
+
+      const node = (
+        <div
+          key={a.id}
+          style={{ marginLeft: depth * 24 }}
+          className={`rounded-2xl border bg-white p-3.5 shadow-sm ${isDeleting ? 'border-highlight ring-2 ring-highlight/20' : isEditing ? 'border-primary ring-2 ring-primary/20' : 'border-slate-200'}`}
+        >
+          {isEditing ? (
+            <div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <input value={String(editForm.name)} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className={input} aria-label="Nombre" placeholder="Nombre *" />
+                <input value={String(editForm.description)} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} className={input} aria-label="Descripción" placeholder="Descripción" />
+                <select value={String(editForm.parent_area_id)} onChange={(e) => setEditForm({ ...editForm, parent_area_id: e.target.value })} className={input} aria-label="Depende de (área superior)">
+                  <option value="">Sin área superior (raíz)</option>
+                  {areas.filter((x) => x.id !== a.id && !isDescendant(x.id, a.id)).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+                </select>
+                <select value={String(editForm.lead_id)} onChange={(e) => setEditForm({ ...editForm, lead_id: e.target.value })} className={input} aria-label="Líder">
+                  <option value="">Sin líder</option>
+                  {profiles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+              {editButtons}
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex min-w-0 items-start gap-1.5">
+                {kids.length > 0 ? (
+                  <button
+                    onClick={() =>
+                      setCollapsedAreas((prev) => {
+                        const next = new Set(prev)
+                        if (next.has(a.id)) next.delete(a.id)
+                        else next.add(a.id)
+                        return next
+                      })
+                    }
+                    aria-expanded={!isCollapsed}
+                    aria-label={`${isCollapsed ? 'Desplegar' : 'Colapsar'} subáreas de ${a.name}`}
+                    className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-primary"
+                  >
+                    <span className="material-symbols-outlined text-lg" aria-hidden="true">{isCollapsed ? 'chevron_right' : 'expand_more'}</span>
+                  </button>
+                ) : (
+                  <span className="mt-0.5 h-6 w-6 shrink-0" aria-hidden="true" />
+                )}
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-slate-900">
+                    <span className="mr-1.5 rounded-md bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-extrabold text-primary">{num}</span>
+                    {a.name}
+                    <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">{members.length}</span>
+                    {isCollapsed && kids.length > 0 && (
+                      <span className="ml-1.5 rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-bold text-yellow-700">
+                        +{kids.length} subárea{kids.length === 1 ? '' : 's'}
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-[11px] text-slate-500">Líder: {personName(a.lead_id)}</p>
+                  {a.description && <p className="mt-0.5 text-[11px] text-slate-400 italic">{a.description}</p>}
+                </div>
+              </div>
+              <div className="flex items-center gap-0.5">
+                <button onClick={() => moveSibling(a, -1)} className={`${iconBtn} hover:text-primary`} title="Subir en el orden" aria-label={`Subir ${a.name} en el orden`}>
+                  <span className="material-symbols-outlined text-lg" aria-hidden="true">arrow_upward</span>
+                </button>
+                <button onClick={() => moveSibling(a, 1)} className={`${iconBtn} hover:text-primary`} title="Bajar en el orden" aria-label={`Bajar ${a.name} en el orden`}>
+                  <span className="material-symbols-outlined text-lg" aria-hidden="true">arrow_downward</span>
+                </button>
+                <button onClick={() => promoteArea(a)} disabled={!a.parent_area_id} className={`${iconBtn} hover:text-primary disabled:opacity-25`} title="Subir de nivel (sale de su dependencia)" aria-label={`Subir ${a.name} de nivel`}>
+                  <span className="material-symbols-outlined text-lg" aria-hidden="true">format_indent_decrease</span>
+                </button>
+                <button onClick={() => demoteArea(a)} className={`${iconBtn} hover:text-primary`} title="Bajar de nivel (pasa a depender del área anterior)" aria-label={`Bajar ${a.name} de nivel`}>
+                  <span className="material-symbols-outlined text-lg" aria-hidden="true">format_indent_increase</span>
+                </button>
+                <button onClick={() => startEdit('area', a.id)} className={`${iconBtn} hover:text-primary`} title="Editar (incluye mover a cualquier dependencia)" aria-label={`Editar ${a.name}`}>
+                  <span className="material-symbols-outlined text-lg" aria-hidden="true">edit</span>
+                </button>
+                <button onClick={() => requestDeleteArea(a.id)} className={`${iconBtn} hover:text-highlight`} title="Eliminar" aria-label={`Eliminar ${a.name}`}>
+                  <span className="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {isDeleting && (
+            <div className="view-enter mt-4 rounded-xl border border-highlight/30 bg-highlight/5 p-4">
+              <p className="flex items-start gap-2 text-xs font-bold text-slate-700">
+                <span className="material-symbols-outlined text-base text-highlight" aria-hidden="true">warning</span>
+                Esta área tiene {members.length} persona{members.length === 1 ? '' : 's'} asignada{members.length === 1 ? '' : 's'}. Decide a dónde van antes de eliminar:
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-bold text-slate-500">Mover a todos a:</span>
+                <select
+                  onChange={(e) => setReassign(Object.fromEntries(members.map((m) => [m.id, e.target.value])))}
+                  defaultValue=""
+                  aria-label="Mover a todos a un área"
+                  className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-semibold focus:border-primary focus:outline-none"
+                >
+                  <option value="">Sin área</option>
+                  {areas.filter((x) => x.id !== a.id).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+                </select>
+                <span className="text-[10px] text-slate-400">o ajusta persona por persona:</span>
+              </div>
+              <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
+                {members.map((m) => (
+                  <div key={m.id} className="flex items-center justify-between gap-2 rounded-lg bg-white px-3 py-2">
+                    <span className="truncate text-xs font-semibold text-slate-700">{m.name}</span>
+                    <select
+                      value={reassign[m.id] ?? ''}
+                      onChange={(e) => setReassign((prev) => ({ ...prev, [m.id]: e.target.value }))}
+                      aria-label={`Nueva área para ${m.name}`}
+                      className="rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-semibold focus:border-primary focus:outline-none"
+                    >
+                      <option value="">Sin área</option>
+                      {areas.filter((x) => x.id !== a.id).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+                    </select>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button onClick={() => performDeleteArea(a.id)} className="rounded-xl bg-highlight px-4 py-2 text-xs font-bold text-white hover:brightness-105">
+                  Confirmar eliminación
+                </button>
+                <button onClick={() => { setDeletingArea(null); setReassign({}) }} className="rounded-xl px-4 py-2 text-xs font-bold text-slate-500 hover:bg-white">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )
+
+      const rows: ReactNode[] = [node]
+      if (!isCollapsed && kids.length > 0) rows.push(...renderAreaTree(a.id, num))
+      return rows
+    })
+  }
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -328,101 +547,18 @@ export default function AdminOrganization() {
             <button onClick={addArea} className="mt-3 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:brightness-105">Crear área</button>
           </div>
 
-          <div className="space-y-2">
-            {areas.map((a) => {
-              const members = areaMembers(a.id)
-              const isDeleting = deletingArea === a.id
-              const isEditing = editing?.kind === 'area' && editing.id === a.id
-              return (
-                <div key={a.id} className={`rounded-2xl border bg-white p-4 shadow-sm ${isDeleting ? 'border-highlight ring-2 ring-highlight/20' : isEditing ? 'border-primary ring-2 ring-primary/20' : 'border-slate-200'}`}>
-                  {isEditing ? (
-                    <div>
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        <input value={String(editForm.name)} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} className={input} aria-label="Nombre" placeholder="Nombre *" />
-                        <input value={String(editForm.description)} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} className={input} aria-label="Descripción" placeholder="Descripción" />
-                        <select value={String(editForm.parent_area_id)} onChange={(e) => setEditForm({ ...editForm, parent_area_id: e.target.value })} className={input} aria-label="Área superior">
-                          <option value="">Sin área superior (raíz)</option>
-                          {areas.filter((x) => x.id !== a.id).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
-                        </select>
-                        <select value={String(editForm.lead_id)} onChange={(e) => setEditForm({ ...editForm, lead_id: e.target.value })} className={input} aria-label="Líder">
-                          <option value="">Sin líder</option>
-                          {profiles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                        </select>
-                      </div>
-                      {editButtons}
-                    </div>
-                  ) : (
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold text-slate-900">
-                          {a.parent_area_id && <span className="text-slate-300">└ </span>}{a.name}
-                          <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">
-                            {members.length} persona{members.length === 1 ? '' : 's'}
-                          </span>
-                        </p>
-                        <p className="text-[11px] text-slate-500">
-                          {a.parent_area_id ? `Depende de ${areas.find((x) => x.id === a.parent_area_id)?.name ?? '—'} · ` : 'Raíz · '}
-                          Líder: {personName(a.lead_id)}
-                        </p>
-                        {a.description && <p className="mt-1 text-[11px] text-slate-400 italic">{a.description}</p>}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => startEdit('area', a.id)} className={`${iconBtn} hover:text-primary`} aria-label={`Editar ${a.name}`}>
-                          <span className="material-symbols-outlined text-lg" aria-hidden="true">edit</span>
-                        </button>
-                        <button onClick={() => requestDeleteArea(a.id)} className={`${iconBtn} hover:text-highlight`} aria-label={`Eliminar ${a.name}`}>
-                          <span className="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
+          <p className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-[10px] font-bold text-slate-400">
+            <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm" aria-hidden="true">arrow_upward</span>/<span className="material-symbols-outlined text-sm" aria-hidden="true">arrow_downward</span> cambiar orden</span>
+            <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm" aria-hidden="true">format_indent_decrease</span> subir de nivel</span>
+            <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm" aria-hidden="true">format_indent_increase</span> volver subárea de la anterior</span>
+            <span className="flex items-center gap-1"><span className="material-symbols-outlined text-sm" aria-hidden="true">edit</span> editar y mover a cualquier dependencia</span>
+          </p>
 
-                  {isDeleting && (
-                    <div className="view-enter mt-4 rounded-xl border border-highlight/30 bg-highlight/5 p-4">
-                      <p className="flex items-start gap-2 text-xs font-bold text-slate-700">
-                        <span className="material-symbols-outlined text-base text-highlight" aria-hidden="true">warning</span>
-                        Esta área tiene {members.length} persona{members.length === 1 ? '' : 's'} asignada{members.length === 1 ? '' : 's'}. Decide a dónde van antes de eliminar:
-                      </p>
-                      <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <span className="text-[11px] font-bold text-slate-500">Mover a todos a:</span>
-                        <select
-                          onChange={(e) => setReassign(Object.fromEntries(members.map((m) => [m.id, e.target.value])))}
-                          defaultValue="" aria-label="Mover a todos a un área"
-                          className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-semibold focus:border-primary focus:outline-none"
-                        >
-                          <option value="">Sin área</option>
-                          {areas.filter((x) => x.id !== a.id).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
-                        </select>
-                        <span className="text-[10px] text-slate-400">o ajusta persona por persona:</span>
-                      </div>
-                      <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
-                        {members.map((m) => (
-                          <div key={m.id} className="flex items-center justify-between gap-2 rounded-lg bg-white px-3 py-2">
-                            <span className="truncate text-xs font-semibold text-slate-700">{m.name}</span>
-                            <select
-                              value={reassign[m.id] ?? ''} onChange={(e) => setReassign((prev) => ({ ...prev, [m.id]: e.target.value }))}
-                              aria-label={`Nueva área para ${m.name}`}
-                              className="rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-semibold focus:border-primary focus:outline-none"
-                            >
-                              <option value="">Sin área</option>
-                              {areas.filter((x) => x.id !== a.id).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
-                            </select>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="mt-3 flex gap-2">
-                        <button onClick={() => performDeleteArea(a.id)} className="rounded-xl bg-highlight px-4 py-2 text-xs font-bold text-white hover:brightness-105">
-                          Confirmar eliminación
-                        </button>
-                        <button onClick={() => { setDeletingArea(null); setReassign({}) }} className="rounded-xl px-4 py-2 text-xs font-bold text-slate-500 hover:bg-white">
-                          Cancelar
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
+          <div className="space-y-1.5">
+            {renderAreaTree(null, '')}
+            {areas.length === 0 && (
+              <p className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-xs text-slate-400">Sin áreas aún.</p>
+            )}
           </div>
         </>
       ) : tab === 'cargos' ? (
