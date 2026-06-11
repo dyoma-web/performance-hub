@@ -5,6 +5,10 @@ import Login from './views/Login'
 import Dashboard from './views/Dashboard'
 import Objectives from './views/Objectives'
 import SelfReview from './views/SelfReview'
+import Checkin from './views/Checkin'
+import PeerFeedback from './views/PeerFeedback'
+import Team from './views/Team'
+import FacilitatorReview from './views/FacilitatorReview'
 import Placeholder from './views/Placeholder'
 import type { ReactNode } from 'react'
 
@@ -45,11 +49,13 @@ export default function App() {
         {/* Colaborador */}
         <Route path="/objetivos" element={<Objectives />} />
         <Route path="/mi-evaluacion" element={<SelfReview />} />
-        <Route path="/check-in" element={<Placeholder title="Check-in Mensual" phase={5} />} />
+        <Route path="/check-in" element={<Checkin />} />
+        <Route path="/feedback" element={<PeerFeedback />} />
         <Route path="/mi-desarrollo" element={<Placeholder title="Mi Desarrollo" phase={6} />} />
         {/* Facilitador */}
-        <Route path="/equipo" element={<Placeholder title="Mi Equipo" phase={5} />} />
-        <Route path="/evaluar" element={<Placeholder title="Evaluar" phase={5} />} />
+        <Route path="/equipo" element={<Team />} />
+        <Route path="/evaluar" element={<Navigate to="/equipo" replace />} />
+        <Route path="/evaluar/:userId" element={<FacilitatorReview />} />
         <Route path="/reuniones" element={<Placeholder title="Reuniones 1:1" phase={6} />} />
         {/* Admin */}
         <Route path="/ciclos" element={<Placeholder title="Gestión de Ciclos" phase={7} />} />

@@ -20,6 +20,7 @@ function navItems(role: Role): NavItem[] {
       { to: '/objetivos', icon: 'flag', label: 'Mis Objetivos' },
       { to: '/mi-evaluacion', icon: 'rate_review', label: 'Mi Evaluación' },
       { to: '/check-in', icon: 'event_available', label: 'Check-in Mensual' },
+      { to: '/feedback', icon: 'reviews', label: 'Feedback a Pares' },
       { to: '/mi-desarrollo', icon: 'trending_up', label: 'Mi Desarrollo' },
     ]
   }
@@ -27,7 +28,7 @@ function navItems(role: Role): NavItem[] {
     return [
       ...base,
       { to: '/equipo', icon: 'groups', label: 'Mi Equipo' },
-      { to: '/evaluar', icon: 'rate_review', label: 'Evaluar' },
+      { to: '/feedback', icon: 'reviews', label: 'Feedback a Pares' },
       { to: '/reuniones', icon: 'handshake', label: 'Reuniones 1:1' },
     ]
   }
