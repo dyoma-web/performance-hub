@@ -21,6 +21,7 @@ function navItems(role: Role): NavItem[] {
       { to: '/mi-evaluacion', icon: 'rate_review', label: 'Mi Evaluación' },
       { to: '/check-in', icon: 'event_available', label: 'Check-in Mensual' },
       { to: '/feedback', icon: 'reviews', label: 'Feedback a Pares' },
+      { to: '/reuniones', icon: 'handshake', label: 'Reunión 1:1' },
       { to: '/mi-desarrollo', icon: 'trending_up', label: 'Mi Desarrollo' },
     ]
   }

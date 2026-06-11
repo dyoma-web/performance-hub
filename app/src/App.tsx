@@ -9,6 +9,8 @@ import Checkin from './views/Checkin'
 import PeerFeedback from './views/PeerFeedback'
 import Team from './views/Team'
 import FacilitatorReview from './views/FacilitatorReview'
+import Meetings from './views/Meetings'
+import Development from './views/Development'
 import Placeholder from './views/Placeholder'
 import type { ReactNode } from 'react'
 
@@ -51,7 +53,8 @@ export default function App() {
         <Route path="/mi-evaluacion" element={<SelfReview />} />
         <Route path="/check-in" element={<Checkin />} />
         <Route path="/feedback" element={<PeerFeedback />} />
-        <Route path="/mi-desarrollo" element={<Placeholder title="Mi Desarrollo" phase={6} />} />
+        <Route path="/mi-desarrollo" element={<Development />} />
+        <Route path="/reuniones" element={<Meetings />} />
         {/* Facilitador */}
         <Route path="/equipo" element={<Team />} />
         <Route path="/evaluar" element={<Navigate to="/equipo" replace />} />
