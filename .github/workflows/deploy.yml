@@ -1,0 +1,50 @@
+name: Deploy a GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+        working-directory: app
+      - run: npm run build -- --base=/performance-hub/
+        working-directory: app
+        env:
+          # La anon key es pública por diseño (la seguridad la aplica RLS en Supabase)
+          VITE_SUPABASE_URL: https://eolmqwqfqazzszosmrbh.supabase.co
+          VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVvbG1xd3FmcWF6enN6b3NtcmJoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExMjgxNDYsImV4cCI6MjA5NjcwNDE0Nn0._u4K7hCHSsd_JvraOGuCyQu0jivYusqJjRqyh0Fsljo
+      # SPA fallback: GitHub Pages sirve 404.html en rutas profundas
+      - run: cp dist/index.html dist/404.html
+        working-directory: app
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: app/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
