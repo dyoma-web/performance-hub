@@ -115,15 +115,26 @@ export default function OrgChart() {
     if (!node) return null
     setSelected(null) // cerrar popups antes de capturar
     await new Promise((r) => setTimeout(r, 50))
-    const dataUrl = await toPng(node, {
+    // Captura a tamaño exacto del contenido (sin recortes)
+    const raw = await toPng(node, {
       backgroundColor: '#ffffff',
       pixelRatio: 2,
-      style: { padding: '24px' },
+      width: node.scrollWidth,
+      height: node.scrollHeight,
     })
     const img = new Image()
-    img.src = dataUrl
+    img.src = raw
     await img.decode()
-    return { dataUrl, width: img.width, height: img.height }
+    // Margen agregado DESPUÉS, sobre un lienzo más grande
+    const margin = 80
+    const canvas = document.createElement('canvas')
+    canvas.width = img.width + margin * 2
+    canvas.height = img.height + margin * 2
+    const ctx = canvas.getContext('2d')!
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.drawImage(img, margin, margin)
+    return { dataUrl: canvas.toDataURL('image/png'), width: canvas.width, height: canvas.height }
   }
 
   async function exportPng() {
