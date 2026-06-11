@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { useToast } from '../components/Toast'
@@ -73,13 +74,16 @@ export default function AdminDirectory() {
               {profiles.map((p) => (
                 <tr key={p.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50">
                   <td className="px-5 py-3">
-                    <div className="flex items-center gap-3">
+                    <Link to={`/persona/${p.id}`} className="group flex items-center gap-3" title={`Ver perfil completo de ${p.name}`}>
                       <Avatar profile={p} size="h-9 w-9" />
                       <div>
-                        <p className="font-bold text-slate-800">{p.name}</p>
+                        <p className="font-bold text-slate-800 group-hover:text-primary">
+                          {p.name}
+                          <span className="material-symbols-outlined ml-1 align-middle text-sm text-slate-300 group-hover:text-primary" aria-hidden="true">open_in_new</span>
+                        </p>
                         <p className="text-[11px] text-slate-400">{p.email} · {p.position ?? '—'}</p>
                       </div>
-                    </div>
+                    </Link>
                   </td>
                   <td className="px-3 py-3">
                     <select

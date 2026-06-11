@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { useToast } from '../components/Toast'
@@ -152,6 +153,13 @@ export default function OrgChart() {
               </p>
             )}
             {kids.length > 0 && <p className="mt-1 font-bold text-primary">{kids.length} reporte(s) directo(s)</p>}
+            <Link
+              to={`/persona/${person.id}`}
+              className="mt-2 flex items-center justify-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-[10px] font-bold text-white hover:brightness-105"
+            >
+              <span className="material-symbols-outlined text-sm" aria-hidden="true">person_search</span>
+              Ver perfil completo
+            </Link>
           </div>
         )}
 

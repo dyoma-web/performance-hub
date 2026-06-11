@@ -23,6 +23,7 @@ const MyProfile = lazy(() => import('./views/MyProfile'))
 const CareerProfile = lazy(() => import('./views/CareerProfile'))
 const Skills360 = lazy(() => import('./views/Skills360'))
 const OrgChart = lazy(() => import('./views/OrgChart'))
+const PersonProfile = lazy(() => import('./views/PersonProfile'))
 
 function LoadingScreen() {
   return (
@@ -66,6 +67,7 @@ export default function App() {
         <Route path="/trayectoria" element={<Suspense fallback={<ViewLoading />}><CareerProfile /></Suspense>} />
         <Route path="/competencias" element={<Suspense fallback={<ViewLoading />}><Skills360 /></Suspense>} />
         <Route path="/organigrama" element={<Suspense fallback={<ViewLoading />}><OrgChart /></Suspense>} />
+        <Route path="/persona/:userId" element={<Suspense fallback={<ViewLoading />}><PersonProfile /></Suspense>} />
         {/* Colaborador */}
         <Route path="/objetivos" element={<Suspense fallback={<ViewLoading />}><Objectives /></Suspense>} />
         <Route path="/mi-evaluacion" element={<Suspense fallback={<ViewLoading />}><SelfReview /></Suspense>} />
