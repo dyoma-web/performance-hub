@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { toPng } from 'html-to-image'
+import { jsPDF } from 'jspdf'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { useToast } from '../components/Toast'
@@ -42,6 +44,8 @@ export default function OrgChart() {
   const [selected, setSelected] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState(false)
+  const chartRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     Promise.all([
@@ -105,6 +109,61 @@ export default function OrgChart() {
   }
   const areaName = (id: string | null) => areas.find((a) => a.id === id)?.name
   const matches = (p: Profile) => search.trim().length > 1 && p.name.toLowerCase().includes(search.trim().toLowerCase())
+
+  async function capture(): Promise<{ dataUrl: string; width: number; height: number } | null> {
+    const node = chartRef.current
+    if (!node) return null
+    setSelected(null) // cerrar popups antes de capturar
+    await new Promise((r) => setTimeout(r, 50))
+    const dataUrl = await toPng(node, {
+      backgroundColor: '#ffffff',
+      pixelRatio: 2,
+      style: { padding: '24px' },
+    })
+    const img = new Image()
+    img.src = dataUrl
+    await img.decode()
+    return { dataUrl, width: img.width, height: img.height }
+  }
+
+  async function exportPng() {
+    setExporting(true)
+    try {
+      const cap = await capture()
+      if (!cap) return
+      const a = document.createElement('a')
+      a.href = cap.dataUrl
+      a.download = `organigrama-${new Date().toISOString().slice(0, 10)}.png`
+      a.click()
+      toast('✓ Organigrama descargado como imagen')
+    } catch {
+      toast('No se pudo generar la imagen', 'error')
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  async function exportPdf() {
+    setExporting(true)
+    try {
+      const cap = await capture()
+      if (!cap) return
+      const w = cap.width / 2
+      const h = cap.height / 2
+      const pdf = new jsPDF({
+        orientation: w > h ? 'landscape' : 'portrait',
+        unit: 'px',
+        format: [w, h],
+      })
+      pdf.addImage(cap.dataUrl, 'PNG', 0, 0, w, h)
+      pdf.save(`organigrama-${new Date().toISOString().slice(0, 10)}.pdf`)
+      toast('✓ Organigrama descargado como PDF')
+    } catch {
+      toast('No se pudo generar el PDF', 'error')
+    } finally {
+      setExporting(false)
+    }
+  }
 
   async function updateSettings(patch: Partial<OrgSettings>) {
     const next = { ...settings, ...patch }
@@ -200,13 +259,29 @@ export default function OrgChart() {
             {visible.length} persona(s) visibles · alcance: {SCOPES.find(([v]) => v === scope)?.[1].toLowerCase()}
           </p>
         </div>
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          aria-label="Buscar persona"
-          className="rounded-xl border border-slate-200 px-4 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-primary/30 focus:outline-none"
-          placeholder="🔍 Buscar persona…"
-        />
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-label="Buscar persona"
+            className="rounded-xl border border-slate-200 px-4 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-primary/30 focus:outline-none"
+            placeholder="🔍 Buscar persona…"
+          />
+          <button
+            onClick={exportPng} disabled={exporting}
+            className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 hover:border-primary/50 disabled:opacity-50"
+          >
+            <span className="material-symbols-outlined text-base" aria-hidden="true">image</span>
+            {exporting ? 'Generando…' : 'PNG'}
+          </button>
+          <button
+            onClick={exportPdf} disabled={exporting}
+            className="flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-bold text-white shadow-md shadow-primary/20 hover:brightness-105 disabled:opacity-50"
+          >
+            <span className="material-symbols-outlined text-base" aria-hidden="true">picture_as_pdf</span>
+            PDF
+          </button>
+        </div>
       </div>
 
       {profile.role === 'admin' && (
@@ -235,7 +310,7 @@ export default function OrgChart() {
       )}
 
       <div className="scrollbar-hide overflow-x-auto rounded-2xl border border-slate-200 bg-slate-50/50 p-8">
-        <div className="flex min-w-max items-start justify-center gap-10">
+        <div ref={chartRef} className="flex min-w-max items-start justify-center gap-10">
           {roots.map((r) => <Node key={r.id} person={r} depth={0} />)}
         </div>
       </div>
