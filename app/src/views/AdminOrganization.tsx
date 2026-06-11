@@ -45,11 +45,13 @@ export default function AdminOrganization() {
   const [posForm, setPosForm] = useState({ name: '', level: 2, description: '' })
   const [invForm, setInvForm] = useState(EMPTY_INV)
   const [loading, setLoading] = useState(true)
+  const [deletingArea, setDeletingArea] = useState<string | null>(null)
+  const [reassign, setReassign] = useState<Record<string, string>>({})
 
   useEffect(() => {
     Promise.all([
       supabase.from('areas').select('*').order('sort_order'),
-      supabase.from('positions').select('*').eq('is_active', true).order('level'),
+      supabase.from('positions').select('*').order('level'),
       supabase.from('invitations').select('*').order('created_at', { ascending: false }),
       supabase.from('profiles').select('*').eq('is_active', true).order('name'),
       supabase.from('teams').select('*').order('name'),
@@ -96,12 +98,49 @@ export default function AdminOrganization() {
     toast('✓ Área actualizada')
   }
 
-  async function deleteArea(id: string) {
-    if (!window.confirm('¿Eliminar esta área? Las personas asignadas quedarán sin área.')) return
+  function areaMembers(id: string) {
+    return profiles.filter((p) => p.area_id === id)
+  }
+
+  function requestDeleteArea(id: string) {
+    const members = areaMembers(id)
+    if (members.length === 0) {
+      if (!window.confirm('¿Eliminar esta área? No tiene personas asignadas.')) return
+      void performDeleteArea(id)
+      return
+    }
+    // Abrir panel de reasignación
+    setDeletingArea(deletingArea === id ? null : id)
+    setReassign({})
+  }
+
+  async function performDeleteArea(id: string) {
+    const members = areaMembers(id)
+    // Aplicar reasignaciones agrupadas por área destino ('' = sin área)
+    const byTarget = new Map<string, string[]>()
+    for (const m of members) {
+      const target = reassign[m.id] ?? ''
+      byTarget.set(target, [...(byTarget.get(target) ?? []), m.id])
+    }
+    for (const [target, ids] of byTarget) {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ area_id: target || null })
+        .in('id', ids)
+      if (error) return void toast(`No se pudo reasignar: ${error.message}`, 'error')
+    }
     const { error } = await supabase.from('areas').delete().eq('id', id)
     if (error) return void toast(`No se pudo eliminar: ${error.message}`, 'error')
-    setAreas((prev) => prev.filter((a) => a.id !== id))
-    toast('Área eliminada')
+    // Estado local: personas reasignadas, subáreas a raíz, área fuera
+    setProfiles((prev) =>
+      prev.map((p) => (p.area_id === id ? { ...p, area_id: reassign[p.id] || null } : p))
+    )
+    setAreas((prev) =>
+      prev.filter((a) => a.id !== id).map((a) => (a.parent_area_id === id ? { ...a, parent_area_id: null } : a))
+    )
+    setDeletingArea(null)
+    setReassign({})
+    toast('✓ Área eliminada y personas reasignadas')
   }
 
   async function addPosition() {
@@ -119,11 +158,11 @@ export default function AdminOrganization() {
     toast('✓ Cargo creado')
   }
 
-  async function deactivatePosition(id: string) {
-    const { error } = await supabase.from('positions').update({ is_active: false }).eq('id', id)
+  async function togglePosition(p: Position) {
+    const { error } = await supabase.from('positions').update({ is_active: !p.is_active }).eq('id', p.id)
     if (error) return void toast(error.message, 'error')
-    setPositions((prev) => prev.filter((p) => p.id !== id))
-    toast('Cargo desactivado')
+    setPositions((prev) => prev.map((x) => (x.id === p.id ? { ...x, is_active: !p.is_active } : x)))
+    toast(p.is_active ? 'Cargo ocultado — puedes reactivarlo cuando quieras' : '✓ Cargo reactivado')
   }
 
   async function invite() {
@@ -200,29 +239,90 @@ export default function AdminOrganization() {
             </div>
           </div>
           <div className="space-y-2">
-            {areas.map((a) => (
-              <div key={a.id} className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <div>
-                  <p className="text-sm font-bold text-slate-900">
-                    {a.parent_area_id && <span className="text-slate-300">└ </span>}{a.name}
-                  </p>
-                  <p className="text-[11px] text-slate-500">
-                    {a.parent_area_id ? `Depende de ${areas.find((x) => x.id === a.parent_area_id)?.name ?? '—'} · ` : 'Raíz · '}
-                    Líder: {personName(a.lead_id)}
-                  </p>
+            {areas.map((a) => {
+              const members = areaMembers(a.id)
+              const isDeleting = deletingArea === a.id
+              return (
+                <div key={a.id} className={`rounded-2xl border bg-white p-4 shadow-sm ${isDeleting ? 'border-highlight ring-2 ring-highlight/20' : 'border-slate-200'}`}>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-bold text-slate-900">
+                        {a.parent_area_id && <span className="text-slate-300">└ </span>}{a.name}
+                        <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">
+                          {members.length} persona{members.length === 1 ? '' : 's'}
+                        </span>
+                      </p>
+                      <p className="text-[11px] text-slate-500">
+                        {a.parent_area_id ? `Depende de ${areas.find((x) => x.id === a.parent_area_id)?.name ?? '—'} · ` : 'Raíz · '}
+                        Líder: {personName(a.lead_id)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <select value={a.lead_id ?? ''} onChange={(e) => updateArea(a.id, { lead_id: e.target.value || null })}
+                        className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs font-semibold focus:border-primary focus:outline-none" aria-label={`Líder de ${a.name}`}>
+                        <option value="">Sin líder</option>
+                        {profiles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                      </select>
+                      <button onClick={() => requestDeleteArea(a.id)} className="rounded-lg p-2 text-slate-400 hover:text-highlight" aria-label={`Eliminar ${a.name}`}>
+                        <span className="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {isDeleting && (
+                    <div className="view-enter mt-4 rounded-xl border border-highlight/30 bg-highlight/5 p-4">
+                      <p className="flex items-start gap-2 text-xs font-bold text-slate-700">
+                        <span className="material-symbols-outlined text-base text-highlight" aria-hidden="true">warning</span>
+                        Esta área tiene {members.length} persona{members.length === 1 ? '' : 's'} asignada{members.length === 1 ? '' : 's'}.
+                        Decide a dónde van antes de eliminar:
+                      </p>
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <span className="text-[11px] font-bold text-slate-500">Mover a todos a:</span>
+                        <select
+                          onChange={(e) => {
+                            const target = e.target.value
+                            setReassign(Object.fromEntries(members.map((m) => [m.id, target])))
+                          }}
+                          defaultValue=""
+                          aria-label="Mover a todos a un área"
+                          className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-semibold focus:border-primary focus:outline-none"
+                        >
+                          <option value="">Sin área</option>
+                          {areas.filter((x) => x.id !== a.id).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+                        </select>
+                        <span className="text-[10px] text-slate-400">o ajusta persona por persona:</span>
+                      </div>
+                      <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
+                        {members.map((m) => (
+                          <div key={m.id} className="flex items-center justify-between gap-2 rounded-lg bg-white px-3 py-2">
+                            <span className="truncate text-xs font-semibold text-slate-700">{m.name}</span>
+                            <select
+                              value={reassign[m.id] ?? ''}
+                              onChange={(e) => setReassign((prev) => ({ ...prev, [m.id]: e.target.value }))}
+                              aria-label={`Nueva área para ${m.name}`}
+                              className="rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-semibold focus:border-primary focus:outline-none"
+                            >
+                              <option value="">Sin área</option>
+                              {areas.filter((x) => x.id !== a.id).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+                            </select>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-3 flex gap-2">
+                        <button onClick={() => performDeleteArea(a.id)}
+                          className="rounded-xl bg-highlight px-4 py-2 text-xs font-bold text-white hover:brightness-105">
+                          Confirmar eliminación
+                        </button>
+                        <button onClick={() => { setDeletingArea(null); setReassign({}) }}
+                          className="rounded-xl px-4 py-2 text-xs font-bold text-slate-500 hover:bg-white">
+                          Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <select value={a.lead_id ?? ''} onChange={(e) => updateArea(a.id, { lead_id: e.target.value || null })}
-                    className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs font-semibold focus:border-primary focus:outline-none" aria-label={`Líder de ${a.name}`}>
-                    <option value="">Sin líder</option>
-                    {profiles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </select>
-                  <button onClick={() => deleteArea(a.id)} className="rounded-lg p-2 text-slate-400 hover:text-highlight" aria-label={`Eliminar ${a.name}`}>
-                    <span className="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
-                  </button>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </>
       ) : tab === 'cargos' ? (
@@ -243,13 +343,21 @@ export default function AdminOrganization() {
           </div>
           <div className="space-y-2">
             {positions.map((p) => (
-              <div key={p.id} className="flex items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div key={p.id} className={`flex items-center justify-between gap-2 rounded-2xl border bg-white p-4 shadow-sm ${p.is_active ? 'border-slate-200' : 'border-dashed border-slate-300 opacity-60'}`}>
                 <div>
-                  <p className="text-sm font-bold text-slate-900">{p.name}</p>
+                  <p className="text-sm font-bold text-slate-900">
+                    {p.name}
+                    {!p.is_active && <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-400 uppercase">Oculto</span>}
+                  </p>
                   <p className="text-[11px] text-slate-500">Nivel {p.level}{p.description ? ` · ${p.description}` : ''}</p>
                 </div>
-                <button onClick={() => deactivatePosition(p.id)} className="rounded-lg p-2 text-slate-400 hover:text-highlight" aria-label={`Desactivar ${p.name}`}>
-                  <span className="material-symbols-outlined text-lg" aria-hidden="true">visibility_off</span>
+                <button
+                  onClick={() => togglePosition(p)}
+                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${p.is_active ? 'text-slate-400 hover:bg-slate-100 hover:text-highlight' : 'bg-primary/10 text-primary hover:bg-primary/20'}`}
+                  aria-label={`${p.is_active ? 'Ocultar' : 'Reactivar'} ${p.name}`}
+                >
+                  <span className="material-symbols-outlined text-base" aria-hidden="true">{p.is_active ? 'visibility_off' : 'visibility'}</span>
+                  {p.is_active ? 'Ocultar' : 'Reactivar'}
                 </button>
               </div>
             ))}
