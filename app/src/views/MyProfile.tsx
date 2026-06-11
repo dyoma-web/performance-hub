@@ -18,6 +18,7 @@ interface PersonalInfo {
   contract_type: string | null
   eps: string | null
   pension_fund: string | null
+  household: string | null
   consent_given_at: string | null
 }
 interface Dependent {
@@ -26,6 +27,25 @@ interface Dependent {
   relationship: string
   birth_date: string | null
   lives_together: boolean
+  is_core_family: boolean
+}
+interface Pet {
+  id: string
+  name: string
+  species: string
+  breed: string | null
+  birth_date: string | null
+}
+interface Celebration {
+  id: string
+  name: string
+  description: string | null
+  date_hint: string | null
+}
+interface CelebPref {
+  celebration_id: string
+  participates: boolean
+  notes: string | null
 }
 interface EmergencyContact {
   id: string
@@ -46,8 +66,14 @@ interface Preferences {
 const EMPTY_PI: PersonalInfo = {
   document_type: null, document_number: null, birth_date: null, phone: null,
   address: null, city: null, country: 'Colombia', marital_status: null, gender: null,
-  blood_type: null, contract_type: null, eps: null, pension_fund: null, consent_given_at: null,
+  blood_type: null, contract_type: null, eps: null, pension_fund: null, household: null,
+  consent_given_at: null,
 }
+
+const SPECIES: [string, string][] = [
+  ['perro', '🐶 Perro'], ['gato', '🐱 Gato'], ['ave', '🐦 Ave'], ['pez', '🐠 Pez'],
+  ['roedor', '🐹 Roedor'], ['reptil', '🦎 Reptil'], ['otro', '🐾 Otro'],
+]
 const EMPTY_PREF: Preferences = { diet: null, allergies: null, shirt_size: null, hobbies: null, celebrate_birthday: true, notes: null }
 
 type Tab = 'datos' | 'familia' | 'preferencias'
@@ -69,8 +95,13 @@ export default function MyProfile() {
   const [consent, setConsent] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [depForm, setDepForm] = useState({ full_name: '', relationship: 'hijo', birth_date: '', lives_together: true })
+  const [depForm, setDepForm] = useState({ full_name: '', relationship: 'hijo', birth_date: '', lives_together: true, is_core_family: true })
   const [ecForm, setEcForm] = useState({ full_name: '', relationship: '', phone: '' })
+  const [pets, setPets] = useState<Pet[]>([])
+  const [petForm, setPetForm] = useState({ name: '', species: 'perro', breed: '', birth_date: '' })
+  const [celebrations, setCelebrations] = useState<Celebration[]>([])
+  const [celebPrefs, setCelebPrefs] = useState<Record<string, CelebPref>>({})
+  const [celebNotes, setCelebNotes] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (!profile) return
@@ -79,7 +110,10 @@ export default function MyProfile() {
       supabase.from('dependents').select('*').eq('user_id', profile.id).order('birth_date'),
       supabase.from('emergency_contacts').select('*').eq('user_id', profile.id),
       supabase.from('personal_preferences').select('*').eq('user_id', profile.id).maybeSingle(),
-    ]).then(([a, b, c, d]) => {
+      supabase.from('pets').select('*').eq('user_id', profile.id),
+      supabase.from('celebrations').select('*').eq('is_active', true).order('sort_order'),
+      supabase.from('celebration_preferences').select('*').eq('user_id', profile.id),
+    ]).then(([a, b, c, d, e, f, g]) => {
       if (a.data) {
         setPi(a.data as PersonalInfo)
         setConsent(!!(a.data as PersonalInfo).consent_given_at)
@@ -87,6 +121,11 @@ export default function MyProfile() {
       setDeps((b.data as Dependent[]) ?? [])
       setContacts((c.data as EmergencyContact[]) ?? [])
       if (d.data) setPref(d.data as Preferences)
+      setPets((e.data as Pet[]) ?? [])
+      setCelebrations((f.data as Celebration[]) ?? [])
+      const map: Record<string, CelebPref> = {}
+      for (const cp of (g.data as CelebPref[]) ?? []) map[cp.celebration_id] = cp
+      setCelebPrefs(map)
       setLoading(false)
     })
   }, [profile])
@@ -143,7 +182,7 @@ export default function MyProfile() {
       .select().single()
     if (error) return void toast(error.message, 'error')
     setDeps((prev) => [...prev, data as Dependent])
-    setDepForm({ full_name: '', relationship: 'hijo', birth_date: '', lives_together: true })
+    setDepForm({ full_name: '', relationship: 'hijo', birth_date: '', lives_together: true, is_core_family: true })
   }
 
   async function removeDependent(id: string) {
@@ -167,6 +206,32 @@ export default function MyProfile() {
   async function removeContact(id: string) {
     await supabase.from('emergency_contacts').delete().eq('id', id)
     setContacts((prev) => prev.filter((c) => c.id !== id))
+  }
+
+  async function addPet() {
+    if (petForm.name.trim().length < 2) return void toast('Nombre de la mascota requerido', 'warning')
+    const { data, error } = await supabase
+      .from('pets')
+      .insert({ ...petForm, breed: petForm.breed.trim() || null, birth_date: petForm.birth_date || null, user_id: profile!.id })
+      .select().single()
+    if (error) return void toast(error.message, 'error')
+    setPets((prev) => [...prev, data as Pet])
+    setPetForm({ name: '', species: 'perro', breed: '', birth_date: '' })
+  }
+
+  async function removePet(id: string) {
+    await supabase.from('pets').delete().eq('id', id)
+    setPets((prev) => prev.filter((p) => p.id !== id))
+  }
+
+  async function setCelebration(celebrationId: string, participates: boolean) {
+    const notes = celebNotes[celebrationId]?.trim() || celebPrefs[celebrationId]?.notes || null
+    const { data, error } = await supabase
+      .from('celebration_preferences')
+      .upsert({ user_id: profile!.id, celebration_id: celebrationId, participates, notes }, { onConflict: 'user_id,celebration_id' })
+      .select().single()
+    if (error) return void toast(error.message, 'error')
+    setCelebPrefs((prev) => ({ ...prev, [celebrationId]: data as CelebPref }))
   }
 
   const input = 'w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-primary/30 focus:outline-none'
@@ -232,6 +297,12 @@ export default function MyProfile() {
                 {[['soltero', 'Soltero/a'], ['casado', 'Casado/a'], ['union-libre', 'Unión libre'], ['separado', 'Separado/a'], ['viudo', 'Viudo/a'], ['otro', 'Otro']].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
             ))}
+            {field('¿Con quién vives?', (
+              <select value={pi.household ?? ''} onChange={(e) => setPi({ ...pi, household: e.target.value || null })} className={input} aria-label="Con quién vives">
+                <option value="">Seleccionar…</option>
+                {[['solo', 'Vivo solo/a'], ['pareja', 'Con mi pareja'], ['familia', 'Con mi familia'], ['compartido', 'Vivienda compartida'], ['otro', 'Otro']].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+            ))}
             {field('Tipo de sangre', (
               <select value={pi.blood_type ?? ''} onChange={(e) => setPi({ ...pi, blood_type: e.target.value || null })} className={input} aria-label="Tipo de sangre">
                 <option value="">Seleccionar…</option>
@@ -270,14 +341,19 @@ export default function MyProfile() {
       {tab === 'familia' && (
         <>
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="mb-1 font-extrabold text-slate-900">Familiares y personas a cargo</h3>
-            <p className="mb-4 text-xs text-slate-500">Hijos, pareja o familiares relevantes para bienestar y beneficios</p>
+            <h3 className="mb-1 font-extrabold text-slate-900">Mi familia</h3>
+            <p className="mb-4 text-xs text-slate-500">
+              Tu <strong>núcleo cercano</strong> no tiene que convivir contigo: puedes registrar a tus padres aunque
+              vivas solo/a. Marca quién convive y quién pertenece a tu núcleo — así ninguna decisión se toma por suposición.
+            </p>
             {deps.map((d) => (
               <div key={d.id} className="mb-2 flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
                 <div>
                   <p className="text-sm font-bold text-slate-800">{d.full_name}</p>
                   <p className="text-[11px] text-slate-500">
-                    {d.relationship}{d.birth_date ? ` · ${age(d.birth_date)}` : ''}{d.lives_together ? ' · convive' : ''}
+                    {d.relationship}{d.birth_date ? ` · ${age(d.birth_date)}` : ''}
+                    {d.is_core_family && <span className="ml-1.5 rounded-full bg-primary/10 px-2 py-0.5 text-[9px] font-bold text-primary uppercase">núcleo cercano</span>}
+                    {d.lives_together && <span className="ml-1.5 rounded-full bg-accent/15 px-2 py-0.5 text-[9px] font-bold text-yellow-700 uppercase">convive</span>}
                   </p>
                 </div>
                 <button onClick={() => removeDependent(d.id)} className="rounded-lg p-2 text-slate-400 hover:text-highlight" aria-label={`Eliminar ${d.full_name}`}>
@@ -285,17 +361,51 @@ export default function MyProfile() {
                 </button>
               </div>
             ))}
-            <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_140px_150px_auto_auto]">
+            <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_130px_145px_auto_auto_auto]">
               <input value={depForm.full_name} onChange={(e) => setDepForm({ ...depForm, full_name: e.target.value })} className={input} placeholder="Nombre completo" aria-label="Nombre del familiar" />
               <select value={depForm.relationship} onChange={(e) => setDepForm({ ...depForm, relationship: e.target.value })} className={input} aria-label="Parentesco">
                 {['hijo', 'hija', 'pareja', 'padre', 'madre', 'hermano', 'otro'].map((r) => <option key={r} value={r}>{r}</option>)}
               </select>
               <input type="date" value={depForm.birth_date} onChange={(e) => setDepForm({ ...depForm, birth_date: e.target.value })} className={input} aria-label="Fecha de nacimiento del familiar" />
               <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+                <input type="checkbox" checked={depForm.is_core_family} onChange={(e) => setDepForm({ ...depForm, is_core_family: e.target.checked })} className="rounded accent-[#16b79c]" />
+                Núcleo
+              </label>
+              <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
                 <input type="checkbox" checked={depForm.lives_together} onChange={(e) => setDepForm({ ...depForm, lives_together: e.target.checked })} className="rounded accent-[#16b79c]" />
                 Convive
               </label>
               <button onClick={addDependent} className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:brightness-105">Agregar</button>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h3 className="mb-1 font-extrabold text-slate-900">Mascotas 🐾</h3>
+            <p className="mb-4 text-xs text-slate-500">También son familia — cuentan para bienestar y celebraciones</p>
+            {pets.map((p) => (
+              <div key={p.id} className="mb-2 flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
+                <div>
+                  <p className="text-sm font-bold text-slate-800">
+                    {SPECIES.find(([v]) => v === p.species)?.[1].split(' ')[0]} {p.name}
+                  </p>
+                  <p className="text-[11px] text-slate-500">
+                    {SPECIES.find(([v]) => v === p.species)?.[1].split(' ')[1]}
+                    {p.breed ? ` · ${p.breed}` : ''}{p.birth_date ? ` · ${age(p.birth_date)}` : ''}
+                  </p>
+                </div>
+                <button onClick={() => removePet(p.id)} className="rounded-lg p-2 text-slate-400 hover:text-highlight" aria-label={`Eliminar ${p.name}`}>
+                  <span className="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
+                </button>
+              </div>
+            ))}
+            <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_130px_1fr_145px_auto]">
+              <input value={petForm.name} onChange={(e) => setPetForm({ ...petForm, name: e.target.value })} className={input} placeholder="Nombre" aria-label="Nombre de la mascota" />
+              <select value={petForm.species} onChange={(e) => setPetForm({ ...petForm, species: e.target.value })} className={input} aria-label="Especie">
+                {SPECIES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+              <input value={petForm.breed} onChange={(e) => setPetForm({ ...petForm, breed: e.target.value })} className={input} placeholder="Raza (opcional)" aria-label="Raza" />
+              <input type="date" value={petForm.birth_date} onChange={(e) => setPetForm({ ...petForm, birth_date: e.target.value })} className={input} aria-label="Fecha de nacimiento de la mascota" />
+              <button onClick={addPet} className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:brightness-105">Agregar</button>
             </div>
           </div>
 
@@ -324,6 +434,55 @@ export default function MyProfile() {
       )}
 
       {tab === 'preferencias' && (
+        <>
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h3 className="mb-1 font-extrabold text-slate-900">Celebraciones</h3>
+          <p className="mb-4 text-xs text-slate-500">
+            Cada quien celebra lo que quiere — tu respuesta evita suposiciones (no participar nunca te excluye
+            de otras actividades). Esta información es visible solo para ti y Talento Humano.
+          </p>
+          <div className="space-y-2">
+            {celebrations.map((c) => {
+              const cp = celebPrefs[c.id]
+              return (
+                <div key={c.id} className="rounded-xl bg-slate-50 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-slate-800">{c.name} {c.date_hint && <span className="text-[10px] font-semibold text-slate-400">({c.date_hint})</span>}</p>
+                      {c.description && <p className="text-[11px] text-slate-500">{c.description}</p>}
+                    </div>
+                    <div className="flex gap-1.5" role="radiogroup" aria-label={`¿Celebras ${c.name}?`}>
+                      <button
+                        role="radio" aria-checked={cp?.participates === true}
+                        onClick={() => setCelebration(c.id, true)}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${cp?.participates === true ? 'bg-primary text-white shadow-md shadow-primary/20' : 'bg-white text-slate-500 ring-1 ring-slate-200 hover:ring-primary/50'}`}
+                      >
+                        Lo celebro
+                      </button>
+                      <button
+                        role="radio" aria-checked={cp?.participates === false}
+                        onClick={() => setCelebration(c.id, false)}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${cp?.participates === false ? 'bg-slate-700 text-white' : 'bg-white text-slate-500 ring-1 ring-slate-200 hover:ring-slate-400'}`}
+                      >
+                        No lo celebro
+                      </button>
+                      {!cp && <span className="self-center text-[10px] font-bold text-slate-300 uppercase">sin responder</span>}
+                    </div>
+                  </div>
+                  <input
+                    value={celebNotes[c.id] ?? cp?.notes ?? ''}
+                    onChange={(e) => setCelebNotes((prev) => ({ ...prev, [c.id]: e.target.value }))}
+                    onBlur={() => { if (cp) setCelebration(c.id, cp.participates) }}
+                    aria-label={`Nota sobre ${c.name}`}
+                    className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[11px] focus:border-primary focus:outline-none"
+                    placeholder="Nota opcional (ej: mis hijos tampoco lo celebran / solo participo en lo no religioso)…"
+                  />
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h3 className="mb-1 font-extrabold text-slate-900">Preferencias personales</h3>
           <p className="mb-4 text-xs text-slate-500">Para eventos, celebraciones, dotación y bienestar</p>
@@ -355,6 +514,7 @@ export default function MyProfile() {
             {saving ? 'Guardando…' : 'Guardar preferencias'}
           </button>
         </div>
+        </>
       )}
     </div>
   )

@@ -45,6 +45,10 @@ export default function PersonProfile() {
   const [references, setReferences] = useState<Row[]>([])
   const [docs, setDocs] = useState<Row[]>([])
   const [skills, setSkills] = useState<{ name: string; self: number | null; peer: number | null; leader: number | null }[]>([])
+  const [pets, setPets] = useState<Row[]>([])
+  const [celebs, setCelebs] = useState<{ name: string; participates: boolean; notes: string | null }[]>([])
+  const [audit, setAudit] = useState<Row[]>([])
+  const [showAudit, setShowAudit] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -74,6 +78,26 @@ export default function PersonProfile() {
         supabase.from('skills').select('id,name').eq('is_active', true),
         supabase.from('skill_ratings').select('skill_id,relation,score').eq('user_id', userId!),
       ])
+      const [pt, cl, cp, au] = await Promise.all([
+        supabase.from('pets').select('*').eq('user_id', userId!),
+        supabase.from('celebrations').select('id,name'),
+        supabase.from('celebration_preferences').select('*').eq('user_id', userId!),
+        supabase.from('audit_log')
+          .select('entity,action,before,after,created_at')
+          .or(`after->>user_id.eq.${userId},before->>user_id.eq.${userId}`)
+          .order('created_at', { ascending: false })
+          .limit(40),
+      ])
+      setPets(pt.data ?? [])
+      const cmap = new Map(((cl.data ?? []) as { id: string; name: string }[]).map((x) => [x.id, x.name]))
+      setCelebs(
+        ((cp.data ?? []) as { celebration_id: string; participates: boolean; notes: string | null }[]).map((x) => ({
+          name: cmap.get(x.celebration_id) ?? '—',
+          participates: x.participates,
+          notes: x.notes,
+        }))
+      )
+      setAudit((au.data as Row[]) ?? [])
       if (cancelled) return
       setPerson(target)
       setManager(mgr.data as Profile | null)
@@ -189,6 +213,7 @@ export default function PersonProfile() {
             {datum('Estado civil', personal.marital_status)}
             {datum('Sangre', personal.blood_type)}
             {datum('Vinculación', personal.contract_type)}
+            {datum('Convivencia', personal.household ? ({ solo: 'Vive solo/a', pareja: 'Con su pareja', familia: 'Con su familia', compartido: 'Vivienda compartida', otro: 'Otro' } as Record<string, string>)[String(personal.household)] : null)}
             {datum('EPS', personal.eps)}
             {datum('Pensiones', personal.pension_fund)}
             {datum('Consentimiento', personal.consent_given_at ? `Otorgado ${fmt(personal.consent_given_at)}` : 'Pendiente')}
@@ -196,15 +221,26 @@ export default function PersonProfile() {
         </div>
       )}
 
-      {(dependents.length > 0 || emergency.length > 0) && (
+      {(dependents.length > 0 || emergency.length > 0 || pets.length > 0) && (
         <div className={card}>
-          <h3 className={h3}>{icon('family_restroom')} Familia y emergencia</h3>
+          <h3 className={h3}>{icon('family_restroom')} Familia, mascotas y emergencia</h3>
           {dependents.length > 0 && (
             <div className="mb-3 space-y-1.5">
               {dependents.map((d, i) => (
                 <p key={i} className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
                   <strong>{String(d.full_name)}</strong> · {String(d.relationship)}
-                  {d.birth_date ? ` · ${age(d.birth_date)}` : ''}{d.lives_together ? ' · convive' : ''}
+                  {d.birth_date ? ` · ${age(d.birth_date)}` : ''}
+                  {Boolean(d.is_core_family) && <span className="ml-1.5 rounded-full bg-primary/10 px-2 py-0.5 text-[9px] font-bold text-primary uppercase">núcleo cercano</span>}
+                  {Boolean(d.lives_together) && <span className="ml-1.5 rounded-full bg-accent/15 px-2 py-0.5 text-[9px] font-bold text-yellow-700 uppercase">convive</span>}
+                </p>
+              ))}
+            </div>
+          )}
+          {pets.length > 0 && (
+            <div className="mb-3 space-y-1.5">
+              {pets.map((p, i) => (
+                <p key={i} className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
+                  🐾 <strong>{String(p.name)}</strong> · {String(p.species)}{p.breed ? ` · ${p.breed}` : ''}{p.birth_date ? ` · ${age(p.birth_date)}` : ''}
                 </p>
               ))}
             </div>
@@ -227,6 +263,27 @@ export default function PersonProfile() {
             {datum('Cumpleaños', prefs.celebrate_birthday ? 'Le gusta celebrarlo' : 'Prefiere no celebrarlo')}
             {datum('Hobbies', prefs.hobbies)}
           </div>
+        </div>
+      )}
+
+      {celebs.length > 0 && (
+        <div className={card}>
+          <h3 className={h3}>{icon('celebration')} Celebraciones</h3>
+          <div className="flex flex-wrap gap-2">
+            {celebs.map((c, i) => (
+              <span key={i} title={c.notes ?? undefined}
+                className={`rounded-full px-3 py-1.5 text-[11px] font-bold ${c.participates ? 'bg-primary/10 text-primary' : 'bg-slate-100 text-slate-500 line-through'}`}>
+                {c.name}{c.notes ? ' *' : ''}
+              </span>
+            ))}
+          </div>
+          {celebs.some((c) => c.notes) && (
+            <div className="mt-3 space-y-1">
+              {celebs.filter((c) => c.notes).map((c, i) => (
+                <p key={i} className="text-[11px] text-slate-500">* <strong>{c.name}:</strong> {c.notes}</p>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -313,6 +370,53 @@ export default function PersonProfile() {
               <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[9px] font-bold text-slate-500 uppercase">{String(d.kind)}</span>
             </button>
           ))}
+        </div>
+      )}
+
+      {isAdmin && audit.length > 0 && (
+        <div className={card}>
+          <button onClick={() => setShowAudit(!showAudit)} aria-expanded={showAudit} className="flex w-full items-center justify-between text-left">
+            <h3 className="flex items-center gap-2 font-extrabold text-slate-900">
+              {icon('history')} Historial de cambios del perfil
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">{audit.length}</span>
+            </h3>
+            <span className="material-symbols-outlined text-slate-400" aria-hidden="true">{showAudit ? 'expand_less' : 'expand_more'}</span>
+          </button>
+          {showAudit && (
+            <div className="view-enter mt-4 space-y-1.5">
+              <p className="mb-2 text-[11px] text-slate-400">
+                Línea base y ajustes — registro inmutable de qué cambió y cuándo (los valores anteriores se conservan).
+              </p>
+              {audit.map((a, i) => {
+                const before = (a.before ?? {}) as Record<string, unknown>
+                const after = (a.after ?? {}) as Record<string, unknown>
+                const skip = new Set(['updated_at', 'created_at', 'id', 'user_id', 'consent_given_at'])
+                const changes = Object.keys({ ...before, ...after })
+                  .filter((k) => !skip.has(k) && JSON.stringify(before[k]) !== JSON.stringify(after[k]))
+                  .slice(0, 4)
+                const entityLabel: Record<string, string> = {
+                  personal_info: 'Identificación', dependents: 'Familia', emergency_contacts: 'Emergencia',
+                  personal_preferences: 'Preferencias', pets: 'Mascotas', celebration_preferences: 'Celebraciones',
+                  education: 'Formación', work_experience: 'Experiencia', recognitions: 'Reconocimientos',
+                  professional_references: 'Referencias', profile_documents: 'Documentos',
+                }
+                const actionLabel = { insert: 'agregó', update: 'modificó', delete: 'eliminó' }[String(a.action)] ?? a.action
+                return (
+                  <div key={i} className="rounded-lg bg-slate-50 px-3 py-2 text-[11px]">
+                    <span className="font-bold text-slate-700">{entityLabel[String(a.entity)] ?? a.entity}</span>{' '}
+                    <span className="text-slate-500">se {String(actionLabel)}</span>
+                    <span className="text-slate-400"> · {fmt(a.created_at)}</span>
+                    {String(a.action) === 'update' && changes.length > 0 && (
+                      <span className="text-slate-500">
+                        {' — '}
+                        {changes.map((k) => `${k}: ${JSON.stringify(before[k]) ?? '∅'} → ${JSON.stringify(after[k]) ?? '∅'}`).join(' · ').slice(0, 180)}
+                      </span>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
 
