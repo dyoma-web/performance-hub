@@ -13,7 +13,10 @@ interface NavItem {
 }
 
 function navItems(role: Role): NavItem[] {
-  const base: NavItem[] = [{ to: '/', icon: 'dashboard', label: 'Dashboard' }]
+  const base: NavItem[] = [
+    { to: '/', icon: 'dashboard', label: 'Dashboard' },
+    { to: '/mi-perfil', icon: 'person', label: 'Mi Perfil' },
+  ]
   if (role === 'colaborador') {
     return [
       ...base,
