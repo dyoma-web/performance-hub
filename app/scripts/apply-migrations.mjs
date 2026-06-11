@@ -51,13 +51,40 @@ const migrationsDir = join(__dirname, '..', '..', 'supabase', 'migrations')
 
 const client = await connect()
 try {
+  // Registro de migraciones aplicadas (idempotencia)
+  await client.query(`create table if not exists public._migrations (
+    name text primary key, applied_at timestamptz not null default now())`)
+  // Si el esquema base ya existía (instalado antes del registro), marcarlo
+  const { rows: baseExists } = await client.query(
+    `select 1 from information_schema.tables where table_schema = 'public' and table_name = 'profiles'`
+  )
+  if (baseExists.length > 0) {
+    await client.query(`insert into public._migrations (name) values
+      ('0001_initial_schema.sql'), ('0002_seed_base.sql') on conflict do nothing`)
+  }
+  const { rows: applied } = await client.query('select name from public._migrations')
+  const done = new Set(applied.map((r) => r.name))
+
   for (const file of readdirSync(migrationsDir).sort()) {
     if (!file.endsWith('.sql')) continue
+    if (done.has(file)) {
+      console.log(`• ${file} ya aplicada, omitida`)
+      continue
+    }
     const sql = readFileSync(join(migrationsDir, file), 'utf8')
     process.stdout.write(`Aplicando ${file} ... `)
-    await client.query(sql)
-    console.log('OK')
+    await client.query('begin')
+    try {
+      await client.query(sql)
+      await client.query('insert into public._migrations (name) values ($1)', [file])
+      await client.query('commit')
+      console.log('OK')
+    } catch (e) {
+      await client.query('rollback')
+      throw e
+    }
   }
+
 
   // Verificación
   const tables = await client.query(
