@@ -485,7 +485,7 @@ export default function MyProfile() {
 
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h3 className="mb-1 font-extrabold text-slate-900">Preferencias personales</h3>
-          <p className="mb-4 text-xs text-slate-500">Para eventos, celebraciones, dotación y bienestar</p>
+          <p className="mb-4 text-xs text-slate-500">Para eventos, celebraciones y bienestar</p>
           <div className="grid gap-4 sm:grid-cols-2">
             {field('Alimentación', (
               <select value={pref.diet ?? ''} onChange={(e) => setPref({ ...pref, diet: e.target.value || null })} className={input} aria-label="Tipo de alimentación">
@@ -493,7 +493,7 @@ export default function MyProfile() {
                 {[['omnivoro', 'Omnívoro'], ['vegetariano', 'Vegetariano'], ['vegano', 'Vegano'], ['pescetariano', 'Pescetariano'], ['sin-gluten', 'Sin gluten'], ['kosher', 'Kosher'], ['halal', 'Halal'], ['otro', 'Otro']].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
               </select>
             ))}
-            {field('Talla de camiseta (dotación)', (
+            {field('Talla de camiseta', (
               <select value={pref.shirt_size ?? ''} onChange={(e) => setPref({ ...pref, shirt_size: e.target.value || null })} className={input} aria-label="Talla">
                 <option value="">Seleccionar…</option>
                 {['XS', 'S', 'M', 'L', 'XL', 'XXL'].map((t) => <option key={t} value={t}>{t}</option>)}
