@@ -47,6 +47,8 @@ export interface Team {
   id: string
   name: string
   parent_team_id: string | null
+  area_id: string | null
+  description: string | null
 }
 
 export interface Objective {
