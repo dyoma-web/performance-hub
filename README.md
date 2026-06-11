@@ -59,6 +59,15 @@ node scripts/seed-users.mjs         # crea los 8 usuarios demo
 - [x] **Fase 7 — Admin:** ciclos, calibración, reportes CSV, directorio
 - [x] **Fase 8 — Beta:** code-splitting, tests, CI con tests, documentación
 
+## Módulo Personas — completado
+
+- [x] **Fase 1 — Datos y privacidad:** 17 tablas, RLS en 3 niveles (público interno / profesional / sensible solo dueño+TH), multi-rol y multi-cargo, consentimiento habeas data
+- [x] **Fase 2 — Estructura organizacional:** áreas jerárquicas, catálogo de cargos, invitaciones serverless (perfil pre-asignado al registrarse)
+- [x] **Fase 3 — Mi Perfil:** identificación completa, familia, contactos de emergencia, preferencias (dieta, tallas, hobbies)
+- [x] **Fase 4 — Mi Trayectoria:** formación, experiencia, referencias, reconocimientos, HV en Storage privado
+- [x] **Fase 5 — Competencias 360:** skills puntuadas por auto/pares/líder + valoración de entregables (calidad/oportunidad/costo)
+- [x] **Fase 6 — Organigrama interactivo:** árbol por "reporta a" con multi-cargo, ramas colapsables y visibilidad configurable (rama/equipo/área/compañía)
+
 ### Siguientes pasos sugeridos (post-beta)
 - Notificaciones por email (Supabase Edge Functions + Resend/SES)
 - SSO con Google (Supabase Auth provider)
