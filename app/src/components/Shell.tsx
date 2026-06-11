@@ -16,6 +16,7 @@ function navItems(role: Role): NavItem[] {
   const base: NavItem[] = [
     { to: '/', icon: 'dashboard', label: 'Dashboard' },
     { to: '/mi-perfil', icon: 'person', label: 'Mi Perfil' },
+    { to: '/trayectoria', icon: 'history_edu', label: 'Mi Trayectoria' },
   ]
   if (role === 'colaborador') {
     return [

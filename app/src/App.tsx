@@ -20,6 +20,7 @@ const AdminReports = lazy(() => import('./views/AdminReports'))
 const AdminDirectory = lazy(() => import('./views/AdminDirectory'))
 const AdminOrganization = lazy(() => import('./views/AdminOrganization'))
 const MyProfile = lazy(() => import('./views/MyProfile'))
+const CareerProfile = lazy(() => import('./views/CareerProfile'))
 
 function LoadingScreen() {
   return (
@@ -60,6 +61,7 @@ export default function App() {
       >
         <Route path="/" element={<Dashboard />} />
         <Route path="/mi-perfil" element={<Suspense fallback={<ViewLoading />}><MyProfile /></Suspense>} />
+        <Route path="/trayectoria" element={<Suspense fallback={<ViewLoading />}><CareerProfile /></Suspense>} />
         {/* Colaborador */}
         <Route path="/objetivos" element={<Suspense fallback={<ViewLoading />}><Objectives /></Suspense>} />
         <Route path="/mi-evaluacion" element={<Suspense fallback={<ViewLoading />}><SelfReview /></Suspense>} />
