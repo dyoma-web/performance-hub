@@ -11,7 +11,10 @@ import Team from './views/Team'
 import FacilitatorReview from './views/FacilitatorReview'
 import Meetings from './views/Meetings'
 import Development from './views/Development'
-import Placeholder from './views/Placeholder'
+import AdminCycles from './views/AdminCycles'
+import AdminCalibration from './views/AdminCalibration'
+import AdminReports from './views/AdminReports'
+import AdminDirectory from './views/AdminDirectory'
 import type { ReactNode } from 'react'
 
 function LoadingScreen() {
@@ -59,12 +62,11 @@ export default function App() {
         <Route path="/equipo" element={<Team />} />
         <Route path="/evaluar" element={<Navigate to="/equipo" replace />} />
         <Route path="/evaluar/:userId" element={<FacilitatorReview />} />
-        <Route path="/reuniones" element={<Placeholder title="Reuniones 1:1" phase={6} />} />
         {/* Admin */}
-        <Route path="/ciclos" element={<Placeholder title="Gestión de Ciclos" phase={7} />} />
-        <Route path="/calibracion" element={<Placeholder title="Calibración" phase={7} />} />
-        <Route path="/reportes" element={<Placeholder title="Reportes" phase={7} />} />
-        <Route path="/directorio" element={<Placeholder title="Directorio" phase={7} />} />
+        <Route path="/ciclos" element={<AdminCycles />} />
+        <Route path="/calibracion" element={<AdminCalibration />} />
+        <Route path="/reportes" element={<AdminReports />} />
+        <Route path="/directorio" element={<AdminDirectory />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
