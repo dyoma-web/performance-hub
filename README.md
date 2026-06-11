@@ -2,6 +2,8 @@
 
 Plataforma de gestión de evaluaciones de desempeño 360° y feedback continuo para culturas horizontales: ciclos de evaluación, check-ins mensuales, feedback de pares, calibración y planes de desarrollo.
 
+**🔗 Beta en línea:** https://dyoma-web.github.io/performance-hub/ (se despliega automáticamente con cada push a `main`)
+
 ## Estructura del repositorio
 
 | Carpeta | Contenido |
