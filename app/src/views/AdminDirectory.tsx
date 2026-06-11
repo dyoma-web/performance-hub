@@ -57,109 +57,109 @@ export default function AdminDirectory() {
       {loading ? (
         <p className="py-12 text-center text-sm text-slate-400">Cargando…</p>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <table className="w-full min-w-[640px] text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 text-[10px] font-extrabold tracking-wider text-slate-400 uppercase">
-                <th className="px-5 py-3">Persona</th>
-                <th className="px-3 py-3">Rol</th>
-                <th className="px-3 py-3">Área</th>
-                <th className="px-3 py-3">Reporta a</th>
-                <th className="px-3 py-3">Equipo</th>
-                <th className="px-3 py-3">Tipo de rol</th>
-                <th className="px-3 py-3">Activo</th>
-              </tr>
-            </thead>
-            <tbody>
-              {profiles.map((p) => (
-                <tr key={p.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50">
-                  <td className="px-5 py-3">
-                    <Link to={`/persona/${p.id}`} className="group flex items-center gap-3" title={`Ver perfil completo de ${p.name}`}>
-                      <Avatar profile={p} size="h-9 w-9" />
-                      <div>
-                        <p className="font-bold text-slate-800 group-hover:text-primary">
-                          {p.name}
-                          <span className="material-symbols-outlined ml-1 align-middle text-sm text-slate-300 group-hover:text-primary" aria-hidden="true">open_in_new</span>
-                        </p>
-                        <p className="text-[11px] text-slate-400">{p.email} · {p.position ?? '—'}</p>
-                      </div>
-                    </Link>
-                  </td>
-                  <td className="px-3 py-3">
+        <div className="grid gap-3 lg:grid-cols-2">
+          {profiles.map((p) => {
+            const selectCls =
+              'w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-semibold focus:border-primary focus:outline-none disabled:opacity-50'
+            const fieldLbl = 'mb-0.5 block text-[9px] font-extrabold tracking-wider text-slate-400 uppercase'
+            return (
+              <div
+                key={p.id}
+                className={`rounded-2xl border bg-white p-4 shadow-sm transition-shadow hover:shadow-md ${p.is_active ? 'border-slate-200' : 'border-dashed border-slate-300 opacity-70'}`}
+              >
+                {/* Cabecera: persona + estado */}
+                <div className="flex items-center justify-between gap-2">
+                  <Link to={`/persona/${p.id}`} className="group flex min-w-0 items-center gap-3" title={`Ver perfil completo de ${p.name}`}>
+                    <Avatar profile={p} size="h-10 w-10" />
+                    <div className="min-w-0">
+                      <p className="truncate font-bold text-slate-800 group-hover:text-primary">
+                        {p.name}
+                        <span className="material-symbols-outlined ml-1 align-middle text-sm text-slate-300 group-hover:text-primary" aria-hidden="true">open_in_new</span>
+                      </p>
+                      <p className="truncate text-[11px] text-slate-400">{p.position ?? '—'} · {p.email}</p>
+                    </div>
+                  </Link>
+                  <button
+                    onClick={() => update(p.id, { is_active: !p.is_active })}
+                    disabled={p.id === profile.id}
+                    aria-label={`${p.is_active ? 'Desactivar' : 'Activar'} a ${p.name}`}
+                    className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-bold uppercase transition-colors disabled:opacity-50 ${
+                      p.is_active ? 'bg-primary/10 text-primary hover:bg-highlight/10 hover:text-highlight' : 'bg-slate-100 text-slate-400 hover:bg-primary/10 hover:text-primary'
+                    }`}
+                  >
+                    {p.is_active ? 'Activo' : 'Inactivo'}
+                  </button>
+                </div>
+
+                {/* Asignaciones en grilla compacta */}
+                <div className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-50 pt-3 sm:grid-cols-3">
+                  <div>
+                    <span className={fieldLbl}>Rol</span>
                     <select
                       value={p.role}
                       onChange={(e) => update(p.id, { role: e.target.value as Role })}
                       disabled={p.id === profile.id}
                       aria-label={`Rol de ${p.name}`}
-                      className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs font-semibold focus:border-primary focus:outline-none disabled:opacity-50"
+                      className={selectCls}
                     >
                       {(['colaborador', 'facilitador', 'admin', 'invitado'] as Role[]).map((r) => (
                         <option key={r} value={r}>{roleLabel(r)}</option>
                       ))}
                     </select>
-                  </td>
-                  <td className="px-3 py-3">
+                  </div>
+                  <div>
+                    <span className={fieldLbl}>Área</span>
                     <select
                       value={p.area_id ?? ''}
                       onChange={(e) => update(p.id, { area_id: e.target.value || null })}
                       aria-label={`Área de ${p.name}`}
-                      className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs font-semibold focus:border-primary focus:outline-none"
+                      className={selectCls}
                     >
                       <option value="">Sin área</option>
                       {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                     </select>
-                  </td>
-                  <td className="px-3 py-3">
+                  </div>
+                  <div>
+                    <span className={fieldLbl}>Reporta a</span>
                     <select
                       value={p.manager_id ?? ''}
                       onChange={(e) => update(p.id, { manager_id: e.target.value || null })}
-                      disabled={p.id === profile.id && profile.role !== 'admin'}
                       aria-label={`Jefe directo de ${p.name}`}
-                      className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs font-semibold focus:border-primary focus:outline-none"
+                      className={selectCls}
                     >
                       <option value="">Nadie (raíz)</option>
                       {profiles.filter((m) => m.id !== p.id).map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
                     </select>
-                  </td>
-                  <td className="px-3 py-3">
+                  </div>
+                  <div>
+                    <span className={fieldLbl}>Equipo</span>
                     <select
                       value={p.team_id ?? ''}
                       onChange={(e) => update(p.id, { team_id: e.target.value || null })}
                       aria-label={`Equipo de ${p.name}`}
-                      className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs font-semibold focus:border-primary focus:outline-none"
+                      className={selectCls}
                     >
                       <option value="">Sin equipo</option>
                       {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                     </select>
-                  </td>
-                  <td className="px-3 py-3">
+                  </div>
+                  <div>
+                    <span className={fieldLbl}>Tipo de labor</span>
                     <select
                       value={p.role_type}
                       onChange={(e) => update(p.id, { role_type: e.target.value })}
-                      aria-label={`Tipo de rol de ${p.name}`}
-                      className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs font-semibold focus:border-primary focus:outline-none"
+                      aria-label={`Tipo de labor de ${p.name}`}
+                      className={selectCls}
                     >
                       {['default', 'designer', 'engineer', 'marketing'].map((rt) => (
-                        <option key={rt} value={rt}>{rt}</option>
+                        <option key={rt} value={rt}>{rt === 'default' ? 'general' : rt}</option>
                       ))}
                     </select>
-                  </td>
-                  <td className="px-3 py-3">
-                    <button
-                      onClick={() => update(p.id, { is_active: !p.is_active })}
-                      disabled={p.id === profile.id}
-                      aria-label={`${p.is_active ? 'Desactivar' : 'Activar'} a ${p.name}`}
-                      className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase transition-colors disabled:opacity-50 ${
-                        p.is_active ? 'bg-primary/10 text-primary hover:bg-highlight/10 hover:text-highlight' : 'bg-slate-100 text-slate-400 hover:bg-primary/10 hover:text-primary'
-                      }`}
-                    >
-                      {p.is_active ? 'Activo' : 'Inactivo'}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
     </div>
