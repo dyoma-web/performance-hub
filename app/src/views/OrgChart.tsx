@@ -45,6 +45,7 @@ export default function OrgChart() {
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
+  const [zoom, setZoom] = useState(1)
   const chartRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -114,7 +115,9 @@ export default function OrgChart() {
     const node = chartRef.current
     if (!node) return null
     setSelected(null) // cerrar popups antes de capturar
-    await new Promise((r) => setTimeout(r, 50))
+    const prevZoom = zoom
+    if (prevZoom !== 1) setZoom(1) // exportar siempre al 100%
+    await new Promise((r) => setTimeout(r, 120))
     // Captura a tamaño exacto del contenido (sin recortes)
     const raw = await toPng(node, {
       backgroundColor: '#ffffff',
@@ -134,6 +137,7 @@ export default function OrgChart() {
     ctx.fillStyle = '#ffffff'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
     ctx.drawImage(img, margin, margin)
+    if (prevZoom !== 1) setZoom(prevZoom)
     return { dataUrl: canvas.toDataURL('image/png'), width: canvas.width, height: canvas.height }
   }
 
@@ -320,9 +324,39 @@ export default function OrgChart() {
         </div>
       )}
 
-      <div className="scrollbar-hide overflow-x-auto rounded-2xl border border-slate-200 bg-slate-50/50 p-8">
-        <div ref={chartRef} className="flex min-w-max items-start justify-center gap-10">
-          {roots.map((r) => <Node key={r.id} person={r} depth={0} />)}
+      <div className="relative rounded-2xl border border-slate-200 bg-slate-50/50">
+        {/* Controles de zoom */}
+        <div className="absolute top-3 right-3 z-20 flex items-center gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+          <button
+            onClick={() => setZoom((z) => Math.max(0.3, Math.round((z - 0.1) * 10) / 10))}
+            disabled={zoom <= 0.3}
+            aria-label="Alejar"
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30"
+          >
+            <span className="material-symbols-outlined text-lg" aria-hidden="true">zoom_out</span>
+          </button>
+          <button
+            onClick={() => setZoom(1)}
+            aria-label="Restablecer zoom al 100%"
+            className="min-w-12 rounded-lg px-1 py-1 text-center text-[11px] font-bold text-slate-600 hover:bg-slate-100"
+            title="Volver al 100%"
+          >
+            {Math.round(zoom * 100)}%
+          </button>
+          <button
+            onClick={() => setZoom((z) => Math.min(1.5, Math.round((z + 0.1) * 10) / 10))}
+            disabled={zoom >= 1.5}
+            aria-label="Acercar"
+            className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-30"
+          >
+            <span className="material-symbols-outlined text-lg" aria-hidden="true">zoom_in</span>
+          </button>
+        </div>
+
+        <div className="scrollbar-hide overflow-auto p-8" style={{ maxHeight: '70vh' }}>
+          <div ref={chartRef} style={{ zoom }} className="flex min-w-max items-start justify-center gap-10">
+            {roots.map((r) => <Node key={r.id} person={r} depth={0} />)}
+          </div>
         </div>
       </div>
 
