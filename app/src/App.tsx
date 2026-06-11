@@ -18,6 +18,7 @@ const AdminCycles = lazy(() => import('./views/AdminCycles'))
 const AdminCalibration = lazy(() => import('./views/AdminCalibration'))
 const AdminReports = lazy(() => import('./views/AdminReports'))
 const AdminDirectory = lazy(() => import('./views/AdminDirectory'))
+const AdminOrganization = lazy(() => import('./views/AdminOrganization'))
 
 function LoadingScreen() {
   return (
@@ -73,6 +74,7 @@ export default function App() {
         <Route path="/calibracion" element={<Suspense fallback={<ViewLoading />}><AdminCalibration /></Suspense>} />
         <Route path="/reportes" element={<Suspense fallback={<ViewLoading />}><AdminReports /></Suspense>} />
         <Route path="/directorio" element={<Suspense fallback={<ViewLoading />}><AdminDirectory /></Suspense>} />
+        <Route path="/organizacion" element={<Suspense fallback={<ViewLoading />}><AdminOrganization /></Suspense>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

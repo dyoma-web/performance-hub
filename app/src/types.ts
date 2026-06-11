@@ -10,6 +10,10 @@ export interface Profile {
   role_type: string
   avatar: string | null
   is_active: boolean
+  manager_id: string | null
+  area_id: string | null
+  photo_url: string | null
+  hire_date: string | null
 }
 
 export interface CycleConfig {

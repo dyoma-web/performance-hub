@@ -11,15 +11,18 @@ export default function AdminDirectory() {
   const toast = useToast()
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [teams, setTeams] = useState<Team[]>([])
+  const [areas, setAreas] = useState<{ id: string; name: string }[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     Promise.all([
       supabase.from('profiles').select('*').order('name'),
       supabase.from('teams').select('*').order('name'),
-    ]).then(([p, t]) => {
+      supabase.from('areas').select('id,name').order('sort_order'),
+    ]).then(([p, t, a]) => {
       setProfiles((p.data as Profile[]) ?? [])
       setTeams((t.data as Team[]) ?? [])
+      setAreas(a.data ?? [])
       setLoading(false)
     })
   }, [])
@@ -59,6 +62,8 @@ export default function AdminDirectory() {
               <tr className="border-b border-slate-100 text-[10px] font-extrabold tracking-wider text-slate-400 uppercase">
                 <th className="px-5 py-3">Persona</th>
                 <th className="px-3 py-3">Rol</th>
+                <th className="px-3 py-3">Área</th>
+                <th className="px-3 py-3">Reporta a</th>
                 <th className="px-3 py-3">Equipo</th>
                 <th className="px-3 py-3">Tipo de rol</th>
                 <th className="px-3 py-3">Activo</th>
@@ -87,6 +92,29 @@ export default function AdminDirectory() {
                       {(['colaborador', 'facilitador', 'admin', 'invitado'] as Role[]).map((r) => (
                         <option key={r} value={r}>{roleLabel(r)}</option>
                       ))}
+                    </select>
+                  </td>
+                  <td className="px-3 py-3">
+                    <select
+                      value={p.area_id ?? ''}
+                      onChange={(e) => update(p.id, { area_id: e.target.value || null })}
+                      aria-label={`Área de ${p.name}`}
+                      className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs font-semibold focus:border-primary focus:outline-none"
+                    >
+                      <option value="">Sin área</option>
+                      {areas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                    </select>
+                  </td>
+                  <td className="px-3 py-3">
+                    <select
+                      value={p.manager_id ?? ''}
+                      onChange={(e) => update(p.id, { manager_id: e.target.value || null })}
+                      disabled={p.id === profile.id && profile.role !== 'admin'}
+                      aria-label={`Jefe directo de ${p.name}`}
+                      className="rounded-lg border border-slate-200 px-2 py-1.5 text-xs font-semibold focus:border-primary focus:outline-none"
+                    >
+                      <option value="">Nadie (raíz)</option>
+                      {profiles.filter((m) => m.id !== p.id).map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
                     </select>
                   </td>
                   <td className="px-3 py-3">

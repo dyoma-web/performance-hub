@@ -40,6 +40,7 @@ function navItems(role: Role): NavItem[] {
       { to: '/calibracion', icon: 'tune', label: 'Calibración' },
       { to: '/reportes', icon: 'assessment', label: 'Reportes' },
       { to: '/directorio', icon: 'group', label: 'Directorio' },
+      { to: '/organizacion', icon: 'account_tree', label: 'Organización' },
     ]
   }
   return base

@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { supabase } from '../lib/supabase'
 
 const DEMO_ACCOUNTS = [
   { email: 'alejandra@demo360.co', label: 'Alejandra Rivera', role: 'Colaboradora · Diseño' },
@@ -10,9 +11,12 @@ const DEMO_ACCOUNTS = [
 
 export default function Login() {
   const { session, signIn } = useAuth()
+  const [mode, setMode] = useState<'login' | 'signup'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [name, setName] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [info, setInfo] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   if (session) return <Navigate to="/" replace />
@@ -20,9 +24,25 @@ export default function Login() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
+    setInfo(null)
     setSubmitting(true)
-    const err = await signIn(email.trim(), password)
-    if (err) setError(err)
+    if (mode === 'login') {
+      const err = await signIn(email.trim(), password)
+      if (err) setError(err)
+    } else {
+      const { data, error: err } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: { data: { name: name.trim() } },
+      })
+      if (err) {
+        setError(err.message)
+      } else if (data.session) {
+        // confirmación de email desactivada: entra directo
+      } else {
+        setInfo('Revisa tu correo para confirmar la cuenta. Si tienes una invitación, tu perfil quedará configurado automáticamente.')
+      }
+    }
     setSubmitting(false)
   }
 
@@ -48,6 +68,22 @@ export default function Login() {
           className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/50 sm:p-8"
         >
           <div className="space-y-4">
+            {mode === 'signup' && (
+              <div>
+                <label htmlFor="name" className="mb-1.5 block text-xs font-bold text-slate-600">
+                  Nombre completo
+                </label>
+                <input
+                  id="name"
+                  type="text"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary/30 focus:outline-none"
+                  placeholder="Tu nombre y apellido"
+                />
+              </div>
+            )}
             <div>
               <label htmlFor="email" className="mb-1.5 block text-xs font-bold text-slate-600">
                 Correo electrónico
@@ -85,13 +121,30 @@ export default function Login() {
               {error}
             </p>
           )}
+          {info && (
+            <p role="status" className="mt-4 rounded-xl bg-primary/10 px-4 py-3 text-xs font-semibold text-primary">
+              {info}
+            </p>
+          )}
 
           <button
             type="submit"
             disabled={submitting}
             className="mt-6 w-full rounded-xl bg-primary py-3 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:brightness-105 disabled:opacity-60"
           >
-            {submitting ? 'Ingresando…' : 'Ingresar'}
+            {submitting ? 'Procesando…' : mode === 'login' ? 'Ingresar' : 'Crear cuenta'}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setMode(mode === 'login' ? 'signup' : 'login')
+              setError(null)
+              setInfo(null)
+            }}
+            className="mt-3 w-full text-center text-xs font-bold text-slate-400 hover:text-primary"
+          >
+            {mode === 'login' ? '¿Te invitaron? Crea tu cuenta aquí' : '¿Ya tienes cuenta? Ingresa'}
           </button>
         </form>
 
