@@ -1,21 +1,23 @@
+import { lazy, Suspense, type ReactNode } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import Shell from './components/Shell'
 import Login from './views/Login'
 import Dashboard from './views/Dashboard'
-import Objectives from './views/Objectives'
-import SelfReview from './views/SelfReview'
-import Checkin from './views/Checkin'
-import PeerFeedback from './views/PeerFeedback'
-import Team from './views/Team'
-import FacilitatorReview from './views/FacilitatorReview'
-import Meetings from './views/Meetings'
-import Development from './views/Development'
-import AdminCycles from './views/AdminCycles'
-import AdminCalibration from './views/AdminCalibration'
-import AdminReports from './views/AdminReports'
-import AdminDirectory from './views/AdminDirectory'
-import type { ReactNode } from 'react'
+
+// Code-splitting: cada vista pesada se carga bajo demanda
+const Objectives = lazy(() => import('./views/Objectives'))
+const SelfReview = lazy(() => import('./views/SelfReview'))
+const Checkin = lazy(() => import('./views/Checkin'))
+const PeerFeedback = lazy(() => import('./views/PeerFeedback'))
+const Team = lazy(() => import('./views/Team'))
+const FacilitatorReview = lazy(() => import('./views/FacilitatorReview'))
+const Meetings = lazy(() => import('./views/Meetings'))
+const Development = lazy(() => import('./views/Development'))
+const AdminCycles = lazy(() => import('./views/AdminCycles'))
+const AdminCalibration = lazy(() => import('./views/AdminCalibration'))
+const AdminReports = lazy(() => import('./views/AdminReports'))
+const AdminDirectory = lazy(() => import('./views/AdminDirectory'))
 
 function LoadingScreen() {
   return (
@@ -30,6 +32,10 @@ function LoadingScreen() {
       </div>
     </div>
   )
+}
+
+function ViewLoading() {
+  return <p className="py-12 text-center text-sm text-slate-400">Cargando…</p>
 }
 
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -52,21 +58,21 @@ export default function App() {
       >
         <Route path="/" element={<Dashboard />} />
         {/* Colaborador */}
-        <Route path="/objetivos" element={<Objectives />} />
-        <Route path="/mi-evaluacion" element={<SelfReview />} />
-        <Route path="/check-in" element={<Checkin />} />
-        <Route path="/feedback" element={<PeerFeedback />} />
-        <Route path="/mi-desarrollo" element={<Development />} />
-        <Route path="/reuniones" element={<Meetings />} />
+        <Route path="/objetivos" element={<Suspense fallback={<ViewLoading />}><Objectives /></Suspense>} />
+        <Route path="/mi-evaluacion" element={<Suspense fallback={<ViewLoading />}><SelfReview /></Suspense>} />
+        <Route path="/check-in" element={<Suspense fallback={<ViewLoading />}><Checkin /></Suspense>} />
+        <Route path="/feedback" element={<Suspense fallback={<ViewLoading />}><PeerFeedback /></Suspense>} />
+        <Route path="/mi-desarrollo" element={<Suspense fallback={<ViewLoading />}><Development /></Suspense>} />
+        <Route path="/reuniones" element={<Suspense fallback={<ViewLoading />}><Meetings /></Suspense>} />
         {/* Facilitador */}
-        <Route path="/equipo" element={<Team />} />
+        <Route path="/equipo" element={<Suspense fallback={<ViewLoading />}><Team /></Suspense>} />
         <Route path="/evaluar" element={<Navigate to="/equipo" replace />} />
-        <Route path="/evaluar/:userId" element={<FacilitatorReview />} />
+        <Route path="/evaluar/:userId" element={<Suspense fallback={<ViewLoading />}><FacilitatorReview /></Suspense>} />
         {/* Admin */}
-        <Route path="/ciclos" element={<AdminCycles />} />
-        <Route path="/calibracion" element={<AdminCalibration />} />
-        <Route path="/reportes" element={<AdminReports />} />
-        <Route path="/directorio" element={<AdminDirectory />} />
+        <Route path="/ciclos" element={<Suspense fallback={<ViewLoading />}><AdminCycles /></Suspense>} />
+        <Route path="/calibracion" element={<Suspense fallback={<ViewLoading />}><AdminCalibration /></Suspense>} />
+        <Route path="/reportes" element={<Suspense fallback={<ViewLoading />}><AdminReports /></Suspense>} />
+        <Route path="/directorio" element={<Suspense fallback={<ViewLoading />}><AdminDirectory /></Suspense>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

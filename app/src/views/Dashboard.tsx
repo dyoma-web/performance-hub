@@ -80,17 +80,20 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="rounded-2xl border border-accent/30 bg-accent/5 p-6">
+      <div className="rounded-2xl border border-primary/20 bg-primary/5 p-6">
         <div className="flex items-start gap-4">
-          <span className="material-symbols-outlined text-accent" aria-hidden="true">
-            construction
+          <span className="material-symbols-outlined text-primary" aria-hidden="true">
+            rocket_launch
           </span>
           <div>
-            <p className="text-sm font-bold text-slate-800">Beta en construcción — Fase 3 de 8 completada</p>
+            <p className="text-sm font-bold text-slate-800">Beta funcional — usa el menú lateral</p>
             <p className="mt-1 text-xs leading-relaxed text-slate-600">
-              Ya funciona: autenticación, roles y permisos (RLS), y este dashboard conectado a datos
-              reales. Próximamente: objetivos y autoevaluación (Fase 4), feedback de pares y
-              check-ins (Fase 5), reuniones 1:1 (Fase 6) y administración (Fase 7).
+              {profile.role === 'colaborador' &&
+                'Define tus objetivos, completa tu autoevaluación, envía check-ins mensuales, responde feedback de pares y sigue tu plan de desarrollo.'}
+              {profile.role === 'facilitador' &&
+                'Revisa el estado de tu equipo, solicita feedback de pares, evalúa con contexto comparativo y cierra el ciclo en la reunión 1:1.'}
+              {profile.role === 'admin' &&
+                'Configura los ciclos y sus pesos, calibra con racional auditado, exporta reportes CSV y gestiona el directorio.'}
             </p>
           </div>
         </div>
