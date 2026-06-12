@@ -15,6 +15,7 @@ export interface Profile {
   photo_url: string | null
   hire_date: string | null
   must_change_password: boolean
+  archived_at: string | null
 }
 
 export interface CycleConfig {
