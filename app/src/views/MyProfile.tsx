@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { useToast } from '../components/Toast'
@@ -255,9 +256,19 @@ export default function MyProfile() {
             {tenure && <p className="text-[11px] font-bold text-primary">{tenure}</p>}
           </div>
         </div>
-        <div className="text-right">
-          <p className="text-2xl font-extrabold text-primary">{completeness}%</p>
-          <p className="text-[10px] font-bold text-slate-400 uppercase">perfil completo</p>
+        <div className="flex items-center gap-4">
+          <div className="text-right">
+            <p className="text-2xl font-extrabold text-primary">{completeness}%</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase">perfil completo</p>
+          </div>
+          <Link
+            to="/cambiar-contrasena"
+            className="flex items-center gap-1.5 rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 hover:border-primary/50"
+            title="Cambiar mi contraseña"
+          >
+            <span className="material-symbols-outlined text-base" aria-hidden="true">key</span>
+            Contraseña
+          </Link>
         </div>
       </div>
 

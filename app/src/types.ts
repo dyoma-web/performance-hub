@@ -14,6 +14,7 @@ export interface Profile {
   area_id: string | null
   photo_url: string | null
   hire_date: string | null
+  must_change_password: boolean
 }
 
 export interface CycleConfig {

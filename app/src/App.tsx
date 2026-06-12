@@ -4,6 +4,7 @@ import { useAuth } from './context/AuthContext'
 import Shell from './components/Shell'
 import Login from './views/Login'
 import Dashboard from './views/Dashboard'
+import ChangePassword from './views/ChangePassword'
 
 // Code-splitting: cada vista pesada se carga bajo demanda
 const Objectives = lazy(() => import('./views/Objectives'))
@@ -45,9 +46,11 @@ function ViewLoading() {
 }
 
 function RequireAuth({ children }: { children: ReactNode }) {
-  const { session, loading } = useAuth()
+  const { session, loading, profile } = useAuth()
   if (loading) return <LoadingScreen />
   if (!session) return <Navigate to="/login" replace />
+  // Contraseña temporal: bloquear la app hasta que defina la suya
+  if (profile?.must_change_password) return <ChangePassword forced />
   return <>{children}</>
 }
 
@@ -64,6 +67,7 @@ export default function App() {
       >
         <Route path="/" element={<Dashboard />} />
         <Route path="/mi-perfil" element={<Suspense fallback={<ViewLoading />}><MyProfile /></Suspense>} />
+        <Route path="/cambiar-contrasena" element={<ChangePassword />} />
         <Route path="/trayectoria" element={<Suspense fallback={<ViewLoading />}><CareerProfile /></Suspense>} />
         <Route path="/competencias" element={<Suspense fallback={<ViewLoading />}><Skills360 /></Suspense>} />
         <Route path="/organigrama" element={<Suspense fallback={<ViewLoading />}><OrgChart /></Suspense>} />
