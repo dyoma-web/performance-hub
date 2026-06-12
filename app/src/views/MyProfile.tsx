@@ -155,11 +155,14 @@ export default function MyProfile() {
       return
     }
     setSaving(true)
-    const payload = {
+    const payload: Record<string, unknown> = {
       ...pi,
       user_id: profile!.id,
       consent_given_at: pi.consent_given_at ?? new Date().toISOString(),
     }
+    // columna calculada por la BD (control anti-duplicados): nunca se envía
+    delete payload.document_number_norm
+    delete payload.updated_at
     const { data, error } = await supabase.from('personal_info').upsert(payload).select().single()
     setSaving(false)
     if (error) {
