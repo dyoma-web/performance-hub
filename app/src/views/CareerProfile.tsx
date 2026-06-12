@@ -45,6 +45,25 @@ interface Doc {
   storage_path: string
   uploaded_at: string
 }
+interface EmploymentPeriod {
+  id: string
+  position_title: string
+  area: string | null
+  reports_to: string | null
+  contract_type: string
+  start_date: string
+  end_date: string | null
+  responsibilities: string | null
+  achievements: string | null
+}
+
+export const CONTRACT_LABEL: Record<string, string> = {
+  laboral: 'Contrato laboral',
+  'prestacion-servicios': 'Prestación de servicios',
+  aprendizaje: 'Contrato de aprendizaje',
+  practicas: 'Prácticas',
+  otro: 'Otro',
+}
 
 const LEVELS: [string, string][] = [
   ['bachillerato', 'Bachillerato'], ['tecnico', 'Técnico'], ['tecnologo', 'Tecnólogo'],
@@ -65,6 +84,7 @@ export default function CareerProfile() {
   const [references, setReferences] = useState<Reference[]>([])
   const [recognitions, setRecognitions] = useState<Recognition[]>([])
   const [docs, setDocs] = useState<Doc[]>([])
+  const [employment, setEmployment] = useState<EmploymentPeriod[]>([])
   const [open, setOpen] = useState<string | null>('edu')
   const [editingItem, setEditingItem] = useState<{ table: string; id: string } | null>(null)
   const [loading, setLoading] = useState(true)
@@ -83,12 +103,14 @@ export default function CareerProfile() {
       supabase.from('professional_references').select('*').eq('user_id', uid),
       supabase.from('recognitions').select('*').eq('user_id', uid).order('date_granted', { ascending: false }),
       supabase.from('profile_documents').select('*').eq('user_id', uid).order('uploaded_at', { ascending: false }),
-    ]).then(([a, b, c, d, e]) => {
+      supabase.from('employment_periods').select('*').eq('user_id', uid).order('start_date', { ascending: false }),
+    ]).then(([a, b, c, d, e, f]) => {
       setEducation((a.data as Education[]) ?? [])
       setExperience((b.data as Experience[]) ?? [])
       setReferences((c.data as Reference[]) ?? [])
       setRecognitions((d.data as Recognition[]) ?? [])
       setDocs((e.data as Doc[]) ?? [])
+      setEmployment((f.data as EmploymentPeriod[]) ?? [])
       setLoading(false)
     })
   }, [profile])
@@ -197,6 +219,40 @@ export default function CareerProfile() {
           Tu perfil profesional — visible para ti, tu línea de liderazgo y Talento Humano
         </p>
       </div>
+
+      {employment.length > 0 && (
+        <Section id="emp" icon="badge" title="Historial en la empresa" count={employment.length}>
+          <p className="mb-3 rounded-xl bg-primary/5 px-4 py-2.5 text-[11px] leading-relaxed text-slate-600">
+            Registro oficial mantenido por Talento Humano — es la base para <strong>cartas de referencia laboral
+            o certificaciones de ejecución de contratos</strong>. Si algo no coincide, contacta a TH.
+          </p>
+          <div className="space-y-2">
+            {employment.map((ep) => {
+              const years = ((new Date(ep.end_date ?? new Date().toISOString().slice(0, 10)).getTime() - new Date(ep.start_date).getTime()) / (365.25 * 86400000)).toFixed(1)
+              return (
+                <div key={ep.id} className="rounded-xl bg-slate-50 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-bold text-slate-800">
+                      {ep.position_title}
+                      {!ep.end_date && <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-[9px] font-bold text-primary uppercase">Actual</span>}
+                    </p>
+                    <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${ep.contract_type === 'laboral' ? 'bg-primary/10 text-primary' : 'bg-indigo-100 text-indigo-600'}`}>
+                      {CONTRACT_LABEL[ep.contract_type] ?? ep.contract_type}
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-[11px] text-slate-500">
+                    {fmtPeriod(ep.start_date, ep.end_date)} ({years} años)
+                    {ep.area && ` · Área: ${ep.area}`}
+                    {ep.reports_to && ` · Reporta a: ${ep.reports_to}`}
+                  </p>
+                  {ep.responsibilities && <p className="mt-1.5 text-[11px] text-slate-600"><strong>Responsabilidades:</strong> {ep.responsibilities}</p>}
+                  {ep.achievements && <p className="mt-1 text-[11px] text-slate-600"><strong>Logros:</strong> {ep.achievements}</p>}
+                </div>
+              )
+            })}
+          </div>
+        </Section>
+      )}
 
       <Section id="edu" icon="school" title="Formación académica" count={education.length}>
         <div className="space-y-2">

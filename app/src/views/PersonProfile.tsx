@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { useToast } from '../components/Toast'
 import Avatar from '../components/Avatar'
 import { roleLabel } from '../lib/labels'
+import { CONTRACT_LABEL } from './CareerProfile'
 import type { Profile, Team } from '../types'
 
 // Vista de solo lectura del perfil de otra persona.
@@ -46,6 +47,10 @@ export default function PersonProfile() {
   const [docs, setDocs] = useState<Row[]>([])
   const [skills, setSkills] = useState<{ name: string; self: number | null; peer: number | null; leader: number | null }[]>([])
   const [pets, setPets] = useState<Row[]>([])
+  const [employment, setEmployment] = useState<Row[]>([])
+  const EMPTY_EMP = { position_title: '', area: '', reports_to: '', contract_type: 'laboral', start_date: '', end_date: '', responsibilities: '', achievements: '' }
+  const [empForm, setEmpForm] = useState(EMPTY_EMP)
+  const [editingEmp, setEditingEmp] = useState<string | null>(null)
   const [celebs, setCelebs] = useState<{ name: string; participates: boolean; notes: string | null }[]>([])
   const [audit, setAudit] = useState<Row[]>([])
   const [showAudit, setShowAudit] = useState(false)
@@ -78,7 +83,7 @@ export default function PersonProfile() {
         supabase.from('skills').select('id,name').eq('is_active', true),
         supabase.from('skill_ratings').select('skill_id,relation,score').eq('user_id', userId!),
       ])
-      const [pt, cl, cp, au] = await Promise.all([
+      const [pt, cl, cp, au, em] = await Promise.all([
         supabase.from('pets').select('*').eq('user_id', userId!),
         supabase.from('celebrations').select('id,name'),
         supabase.from('celebration_preferences').select('*').eq('user_id', userId!),
@@ -87,8 +92,10 @@ export default function PersonProfile() {
           .or(`after->>user_id.eq.${userId},before->>user_id.eq.${userId}`)
           .order('created_at', { ascending: false })
           .limit(40),
+        supabase.from('employment_periods').select('*').eq('user_id', userId!).order('start_date', { ascending: false }),
       ])
       setPets(pt.data ?? [])
+      setEmployment(em.data ?? [])
       const cmap = new Map(((cl.data ?? []) as { id: string; name: string }[]).map((x) => [x.id, x.name]))
       setCelebs(
         ((cp.data ?? []) as { celebration_id: string; participates: boolean; notes: string | null }[]).map((x) => ({
@@ -147,6 +154,41 @@ export default function PersonProfile() {
   const tenure = person.hire_date
     ? `${(Math.floor((Date.now() - new Date(person.hire_date + 'T00:00:00').getTime()) / (365.25 * 8640000)) / 10).toFixed(1)} años en la empresa`
     : null
+
+  async function saveEmployment() {
+    if (empForm.position_title.trim().length < 3 || !empForm.start_date) {
+      return void toast('Cargo y fecha de inicio son obligatorios', 'warning')
+    }
+    const payload = {
+      user_id: userId,
+      position_title: empForm.position_title.trim(),
+      area: empForm.area.trim() || null,
+      reports_to: empForm.reports_to.trim() || null,
+      contract_type: empForm.contract_type,
+      start_date: empForm.start_date,
+      end_date: empForm.end_date || null,
+      responsibilities: empForm.responsibilities.trim() || null,
+      achievements: empForm.achievements.trim() || null,
+    }
+    const q = editingEmp
+      ? supabase.from('employment_periods').update(payload).eq('id', editingEmp).select().single()
+      : supabase.from('employment_periods').insert(payload).select().single()
+    const { data, error } = await q
+    if (error) return void toast(error.message, 'error')
+    setEmployment((prev) =>
+      editingEmp ? prev.map((e) => (e.id === editingEmp ? (data as Row) : e)) : [data as Row, ...prev]
+    )
+    setEmpForm(EMPTY_EMP)
+    setEditingEmp(null)
+    toast('✓ Historial laboral actualizado (auditado)')
+  }
+
+  async function removeEmployment(id: string) {
+    if (!window.confirm('¿Eliminar este periodo del historial laboral?')) return
+    const { error } = await supabase.from('employment_periods').delete().eq('id', id)
+    if (error) return void toast(error.message, 'error')
+    setEmployment((prev) => prev.filter((e) => e.id !== id))
+  }
 
   async function openDoc(path: string) {
     const { data, error } = await supabase.storage.from('profile-docs').createSignedUrl(path, 60)
@@ -281,6 +323,94 @@ export default function PersonProfile() {
               {celebs.filter((c) => c.notes).map((c, i) => (
                 <p key={i} className="text-[11px] text-slate-500">* <strong>{c.name}:</strong> {c.notes}</p>
               ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {(employment.length > 0 || isAdmin) && (
+        <div className={card}>
+          <h3 className={h3}>{icon('badge')} Historial en la empresa</h3>
+          <p className="mb-3 text-[11px] text-slate-400">
+            Registro oficial para cartas de referencia laboral o de ejecución de contratos.
+          </p>
+          <div className="space-y-2">
+            {employment.map((ep) => (
+              <div key={String(ep.id)} className="rounded-xl bg-slate-50 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-bold text-slate-800">
+                    {String(ep.position_title)}
+                    {!ep.end_date && <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-[9px] font-bold text-primary uppercase">Actual</span>}
+                  </p>
+                  <div className="flex items-center gap-1">
+                    <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold ${ep.contract_type === 'laboral' ? 'bg-primary/10 text-primary' : 'bg-indigo-100 text-indigo-600'}`}>
+                      {CONTRACT_LABEL[String(ep.contract_type)] ?? String(ep.contract_type)}
+                    </span>
+                    {isAdmin && (
+                      <>
+                        <button
+                          onClick={() => {
+                            setEmpForm({
+                              position_title: String(ep.position_title), area: String(ep.area ?? ''), reports_to: String(ep.reports_to ?? ''),
+                              contract_type: String(ep.contract_type), start_date: String(ep.start_date), end_date: String(ep.end_date ?? ''),
+                              responsibilities: String(ep.responsibilities ?? ''), achievements: String(ep.achievements ?? ''),
+                            })
+                            setEditingEmp(String(ep.id))
+                          }}
+                          className="rounded-lg p-1.5 text-slate-400 hover:text-primary" aria-label="Editar periodo"
+                        >
+                          <span className="material-symbols-outlined text-lg" aria-hidden="true">edit</span>
+                        </button>
+                        <button onClick={() => removeEmployment(String(ep.id))} className="rounded-lg p-1.5 text-slate-400 hover:text-highlight" aria-label="Eliminar periodo">
+                          <span className="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <p className="mt-0.5 text-[11px] text-slate-500">
+                  {fmt(ep.start_date)} → {ep.end_date ? fmt(ep.end_date) : 'Actual'}
+                  {ep.area ? ` · Área: ${ep.area}` : ''}{ep.reports_to ? ` · Reporta a: ${ep.reports_to}` : ''}
+                </p>
+                {Boolean(ep.responsibilities) && <p className="mt-1.5 text-[11px] text-slate-600"><strong>Responsabilidades:</strong> {String(ep.responsibilities)}</p>}
+                {Boolean(ep.achievements) && <p className="mt-1 text-[11px] text-slate-600"><strong>Logros:</strong> {String(ep.achievements)}</p>}
+              </div>
+            ))}
+          </div>
+
+          {isAdmin && (
+            <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-4">
+              <p className="mb-2 text-xs font-bold text-slate-700">{editingEmp ? 'Editar periodo' : 'Agregar periodo'} (solo TH)</p>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                <input value={empForm.position_title} onChange={(e) => setEmpForm({ ...empForm, position_title: e.target.value })}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs focus:border-primary focus:outline-none" placeholder="Cargo *" aria-label="Cargo del periodo" />
+                <input value={empForm.area} onChange={(e) => setEmpForm({ ...empForm, area: e.target.value })}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs focus:border-primary focus:outline-none" placeholder="Área" aria-label="Área del periodo" />
+                <input value={empForm.reports_to} onChange={(e) => setEmpForm({ ...empForm, reports_to: e.target.value })}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs focus:border-primary focus:outline-none" placeholder="Reporta a" aria-label="Reporta a" />
+                <select value={empForm.contract_type} onChange={(e) => setEmpForm({ ...empForm, contract_type: e.target.value })}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs focus:border-primary focus:outline-none" aria-label="Tipo de contrato">
+                  {Object.entries(CONTRACT_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                </select>
+                <input type="date" value={empForm.start_date} onChange={(e) => setEmpForm({ ...empForm, start_date: e.target.value })}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs focus:border-primary focus:outline-none" aria-label="Inicio del periodo" />
+                <input type="date" value={empForm.end_date} onChange={(e) => setEmpForm({ ...empForm, end_date: e.target.value })}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs focus:border-primary focus:outline-none" aria-label="Fin del periodo (vacío = actual)" />
+                <textarea rows={2} value={empForm.responsibilities} onChange={(e) => setEmpForm({ ...empForm, responsibilities: e.target.value })}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs focus:border-primary focus:outline-none sm:col-span-2 lg:col-span-3" placeholder="Responsabilidades" aria-label="Responsabilidades" />
+                <textarea rows={2} value={empForm.achievements} onChange={(e) => setEmpForm({ ...empForm, achievements: e.target.value })}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs focus:border-primary focus:outline-none sm:col-span-2 lg:col-span-3" placeholder="Logros destacados" aria-label="Logros" />
+              </div>
+              <div className="mt-2 flex gap-2">
+                <button onClick={saveEmployment} className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white hover:brightness-105">
+                  {editingEmp ? 'Guardar cambios' : 'Agregar periodo'}
+                </button>
+                {editingEmp && (
+                  <button onClick={() => { setEditingEmp(null); setEmpForm(EMPTY_EMP) }} className="rounded-xl px-4 py-2 text-xs font-bold text-slate-500 hover:bg-white">
+                    Cancelar
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>

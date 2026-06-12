@@ -86,7 +86,7 @@ function age(birth: string | null): string {
 }
 
 export default function MyProfile() {
-  const { profile } = useAuth()
+  const { profile, refreshProfile } = useAuth()
   const toast = useToast()
   const [tab, setTab] = useState<Tab>('datos')
   const [pi, setPi] = useState<PersonalInfo>(EMPTY_PI)
@@ -103,6 +103,8 @@ export default function MyProfile() {
   const [editingDep, setEditingDep] = useState<string | null>(null)
   const [editingEc, setEditingEc] = useState<string | null>(null)
   const [editingPet, setEditingPet] = useState<string | null>(null)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [roleStart, setRoleStart] = useState<string | null>(null)
   const [celebrations, setCelebrations] = useState<Celebration[]>([])
   const [celebPrefs, setCelebPrefs] = useState<Record<string, CelebPref>>({})
   const [celebNotes, setCelebNotes] = useState<Record<string, string>>({})
@@ -132,7 +134,35 @@ export default function MyProfile() {
       setCelebPrefs(map)
       setLoading(false)
     })
+    // periodo del cargo actual (historial oficial de TH)
+    supabase
+      .from('employment_periods')
+      .select('start_date')
+      .eq('user_id', profile.id)
+      .is('end_date', null)
+      .order('start_date', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => setRoleStart(data?.start_date ?? null))
   }, [profile])
+
+  async function uploadPhoto(file: File) {
+    if (file.size > 3 * 1024 * 1024) return void toast('Máximo 3 MB', 'warning')
+    setUploadingPhoto(true)
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
+    const path = `${profile!.id}/avatar-${Date.now()}.${ext}`
+    const { error: upErr } = await supabase.storage.from('avatars').upload(path, file, { upsert: true })
+    if (upErr) {
+      setUploadingPhoto(false)
+      return void toast(`No se pudo subir: ${upErr.message}`, 'error')
+    }
+    const { data: pub } = supabase.storage.from('avatars').getPublicUrl(path)
+    const { error } = await supabase.from('profiles').update({ photo_url: pub.publicUrl }).eq('id', profile!.id)
+    setUploadingPhoto(false)
+    if (error) return void toast(error.message, 'error')
+    await refreshProfile()
+    toast('✓ Foto de perfil actualizada')
+  }
 
   const completeness = useMemo(() => {
     const fields = [pi.document_number, pi.birth_date, pi.phone, pi.city, pi.blood_type, pi.contract_type]
@@ -299,11 +329,29 @@ export default function MyProfile() {
       {/* Encabezado */}
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-center gap-4">
-          <Avatar profile={profile} size="h-16 w-16" />
+          <div className="relative">
+            <Avatar profile={profile} size="h-16 w-16" />
+            <label
+              className={`absolute -right-1 -bottom-1 flex h-7 w-7 cursor-pointer items-center justify-center rounded-full bg-primary text-white shadow-md ring-2 ring-white hover:brightness-110 ${uploadingPhoto ? 'opacity-50' : ''}`}
+              title="Subir foto de perfil"
+            >
+              <span className="material-symbols-outlined text-sm" aria-hidden="true">photo_camera</span>
+              <input
+                type="file" accept="image/jpeg,image/png,image/webp" className="hidden" disabled={uploadingPhoto}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) void uploadPhoto(f); e.target.value = '' }}
+                aria-label="Subir foto de perfil"
+              />
+            </label>
+          </div>
           <div>
             <h2 className="text-xl font-extrabold tracking-tight text-slate-900">{profile.name}</h2>
             <p className="text-sm text-slate-500">{profile.position ?? '—'}</p>
-            {tenure && <p className="text-[11px] font-bold text-primary">{tenure}</p>}
+            {tenure && (
+              <p className="text-[11px] font-bold text-primary">
+                {tenure}
+                {roleStart && ` · ${((Date.now() - new Date(roleStart + 'T00:00:00').getTime()) / (365.25 * 86400000)).toFixed(1)} años en el cargo actual`}
+              </p>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-4">

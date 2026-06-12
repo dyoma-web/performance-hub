@@ -304,6 +304,26 @@ export default function AdminDirectory() {
                     </select>
                   </div>
                   <div>
+                    <span className={fieldLbl}>Cargo (título)</span>
+                    <input
+                      defaultValue={p.position ?? ''}
+                      onBlur={(e) => { if (e.target.value.trim() !== (p.position ?? '')) update(p.id, { position: e.target.value.trim() || null }) }}
+                      aria-label={`Cargo de ${p.name}`}
+                      className={selectCls}
+                      placeholder="Ej: Líder de Operaciones"
+                    />
+                  </div>
+                  <div>
+                    <span className={fieldLbl}>Fecha de ingreso</span>
+                    <input
+                      type="date"
+                      value={p.hire_date ?? ''}
+                      onChange={(e) => update(p.id, { hire_date: e.target.value || null })}
+                      aria-label={`Fecha de ingreso de ${p.name}`}
+                      className={selectCls}
+                    />
+                  </div>
+                  <div>
                     <span className={fieldLbl}>Tipo de labor</span>
                     <select
                       value={p.role_type}
