@@ -66,6 +66,7 @@ export default function CareerProfile() {
   const [recognitions, setRecognitions] = useState<Recognition[]>([])
   const [docs, setDocs] = useState<Doc[]>([])
   const [open, setOpen] = useState<string | null>('edu')
+  const [editingItem, setEditingItem] = useState<{ table: string; id: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [eduForm, setEduForm] = useState({ title: '', institution: '', location: '', level: 'pregrado', start_date: '', end_date: '', description: '' })
@@ -97,13 +98,38 @@ export default function CareerProfile() {
 
   const input = 'w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-primary/30 focus:outline-none'
 
-  async function add<T>(table: string, payload: Record<string, unknown>, setter: (fn: (prev: T[]) => T[]) => void, reset: () => void) {
+  async function add<T extends { id: string }>(table: string, payload: Record<string, unknown>, setter: (fn: (prev: T[]) => T[]) => void, reset: () => void) {
+    if (editingItem && editingItem.table === table) {
+      const { data, error } = await supabase.from(table).update(payload).eq('id', editingItem.id).select().single()
+      if (error) return void toast(error.message, 'error')
+      setter((prev) => prev.map((x) => (x.id === editingItem.id ? (data as T) : x)))
+      setEditingItem(null)
+      reset()
+      toast('✓ Actualizado')
+      return
+    }
     const { data, error } = await supabase.from(table).insert({ ...payload, user_id: profile!.id }).select().single()
     if (error) return void toast(error.message, 'error')
     setter((prev) => [data as T, ...prev])
     reset()
     toast('✓ Guardado')
   }
+
+  const editBtn = (label: string, onClick: () => void) => (
+    <button onClick={onClick} className="rounded-lg p-1.5 text-slate-400 hover:text-primary" aria-label={`Editar ${label}`}>
+      <span className="material-symbols-outlined text-lg" aria-hidden="true">edit</span>
+    </button>
+  )
+
+  const saveLabel = (table: string, normal: string) =>
+    editingItem?.table === table ? 'Guardar cambios' : normal
+
+  const cancelEdit = (table: string, reset: () => void) =>
+    editingItem?.table === table ? (
+      <button onClick={() => { setEditingItem(null); reset() }} className="mt-3 ml-2 rounded-xl px-4 py-2 text-sm font-bold text-slate-400 hover:text-highlight">
+        Cancelar edición
+      </button>
+    ) : null
 
   async function remove<T extends { id: string }>(table: string, id: string, setter: (fn: (prev: T[]) => T[]) => void) {
     const { error } = await supabase.from(table).delete().eq('id', id)
@@ -183,9 +209,15 @@ export default function CareerProfile() {
                 </p>
                 {ed.description && <p className="mt-1 text-[11px] text-slate-600">{ed.description}</p>}
               </div>
-              <button onClick={() => remove('education', ed.id, setEducation)} className="rounded-lg p-1.5 text-slate-400 hover:text-highlight" aria-label={`Eliminar ${ed.title}`}>
-                <span className="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
-              </button>
+              <div className="flex items-center">
+                {editBtn(ed.title, () => {
+                  setEduForm({ title: ed.title, institution: ed.institution, location: ed.location ?? '', level: ed.level ?? 'pregrado', start_date: ed.start_date ?? '', end_date: ed.end_date ?? '', description: ed.description ?? '' })
+                  setEditingItem({ table: 'education', id: ed.id })
+                })}
+                <button onClick={() => remove('education', ed.id, setEducation)} className="rounded-lg p-1.5 text-slate-400 hover:text-highlight" aria-label={`Eliminar ${ed.title}`}>
+                  <span className="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -207,8 +239,9 @@ export default function CareerProfile() {
               () => setEduForm({ title: '', institution: '', location: '', level: 'pregrado', start_date: '', end_date: '', description: '' }))
           }}
           className="mt-3 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:brightness-105">
-          Agregar formación
+          {saveLabel('education', 'Agregar formación')}
         </button>
+        {cancelEdit('education', () => setEduForm({ title: '', institution: '', location: '', level: 'pregrado', start_date: '', end_date: '', description: '' }))}
       </Section>
 
       <Section id="exp" icon="work_history" title="Experiencia laboral" count={experience.length}>
@@ -220,9 +253,15 @@ export default function CareerProfile() {
                 <p className="text-[11px] text-slate-500">{fmtPeriod(ex.start_date, ex.end_date)}</p>
                 {ex.description && <p className="mt-1 text-[11px] text-slate-600">{ex.description}</p>}
               </div>
-              <button onClick={() => remove('work_experience', ex.id, setExperience)} className="rounded-lg p-1.5 text-slate-400 hover:text-highlight" aria-label={`Eliminar experiencia en ${ex.company}`}>
-                <span className="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
-              </button>
+              <div className="flex items-center">
+                {editBtn(`experiencia en ${ex.company}`, () => {
+                  setExpForm({ company: ex.company, position: ex.position, start_date: ex.start_date ?? '', end_date: ex.end_date ?? '', description: ex.description ?? '' })
+                  setEditingItem({ table: 'work_experience', id: ex.id })
+                })}
+                <button onClick={() => remove('work_experience', ex.id, setExperience)} className="rounded-lg p-1.5 text-slate-400 hover:text-highlight" aria-label={`Eliminar experiencia en ${ex.company}`}>
+                  <span className="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -240,8 +279,9 @@ export default function CareerProfile() {
               () => setExpForm({ company: '', position: '', start_date: '', end_date: '', description: '' }))
           }}
           className="mt-3 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:brightness-105">
-          Agregar experiencia
+          {saveLabel('work_experience', 'Agregar experiencia')}
         </button>
+        {cancelEdit('work_experience', () => setExpForm({ company: '', position: '', start_date: '', end_date: '', description: '' }))}
       </Section>
 
       <Section id="rec" icon="workspace_premium" title="Reconocimientos" count={recognitions.length}>
@@ -256,9 +296,15 @@ export default function CareerProfile() {
                 {r.description && <p className="mt-1 text-[11px] text-slate-600">{r.description}</p>}
               </div>
               {!r.is_internal && (
-                <button onClick={() => remove('recognitions', r.id, setRecognitions)} className="rounded-lg p-1.5 text-slate-400 hover:text-highlight" aria-label={`Eliminar ${r.title}`}>
-                  <span className="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
-                </button>
+                <div className="flex items-center">
+                  {editBtn(r.title, () => {
+                    setRecForm({ title: r.title, granted_by: r.granted_by ?? '', date_granted: r.date_granted ?? '', description: r.description ?? '' })
+                    setEditingItem({ table: 'recognitions', id: r.id })
+                  })}
+                  <button onClick={() => remove('recognitions', r.id, setRecognitions)} className="rounded-lg p-1.5 text-slate-400 hover:text-highlight" aria-label={`Eliminar ${r.title}`}>
+                    <span className="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
+                  </button>
+                </div>
               )}
             </div>
           ))}
@@ -276,8 +322,9 @@ export default function CareerProfile() {
               () => setRecForm({ title: '', granted_by: '', date_granted: '', description: '' }))
           }}
           className="mt-3 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:brightness-105">
-          Agregar reconocimiento
+          {saveLabel('recognitions', 'Agregar reconocimiento')}
         </button>
+        {cancelEdit('recognitions', () => setRecForm({ title: '', granted_by: '', date_granted: '', description: '' }))}
       </Section>
 
       <Section id="refs" icon="contact_phone" title="Referencias (solo TH las ve)" count={references.length}>
@@ -288,9 +335,15 @@ export default function CareerProfile() {
                 <p className="text-sm font-bold text-slate-800">{r.full_name}</p>
                 <p className="text-[11px] text-slate-500">{[r.relationship, r.company, r.phone, r.email].filter(Boolean).join(' · ')}</p>
               </div>
-              <button onClick={() => remove('professional_references', r.id, setReferences)} className="rounded-lg p-1.5 text-slate-400 hover:text-highlight" aria-label={`Eliminar referencia ${r.full_name}`}>
-                <span className="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
-              </button>
+              <div className="flex items-center">
+                {editBtn(`referencia ${r.full_name}`, () => {
+                  setRefForm({ full_name: r.full_name, relationship: r.relationship ?? '', company: r.company ?? '', phone: r.phone ?? '', email: r.email ?? '' })
+                  setEditingItem({ table: 'professional_references', id: r.id })
+                })}
+                <button onClick={() => remove('professional_references', r.id, setReferences)} className="rounded-lg p-1.5 text-slate-400 hover:text-highlight" aria-label={`Eliminar referencia ${r.full_name}`}>
+                  <span className="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -307,8 +360,9 @@ export default function CareerProfile() {
               () => setRefForm({ full_name: '', relationship: '', company: '', phone: '', email: '' }))
           }}
           className="mt-3 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:brightness-105">
-          Agregar referencia
+          {saveLabel('professional_references', 'Agregar referencia')}
         </button>
+        {cancelEdit('professional_references', () => setRefForm({ full_name: '', relationship: '', company: '', phone: '', email: '' }))}
       </Section>
 
       <Section id="docs" icon="folder_shared" title="Hoja de vida y documentos" count={docs.length}>

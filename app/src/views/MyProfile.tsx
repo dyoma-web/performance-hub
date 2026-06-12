@@ -100,6 +100,9 @@ export default function MyProfile() {
   const [ecForm, setEcForm] = useState({ full_name: '', relationship: '', phone: '' })
   const [pets, setPets] = useState<Pet[]>([])
   const [petForm, setPetForm] = useState({ name: '', species: 'perro', breed: '', birth_date: '' })
+  const [editingDep, setEditingDep] = useState<string | null>(null)
+  const [editingEc, setEditingEc] = useState<string | null>(null)
+  const [editingPet, setEditingPet] = useState<string | null>(null)
   const [celebrations, setCelebrations] = useState<Celebration[]>([])
   const [celebPrefs, setCelebPrefs] = useState<Record<string, CelebPref>>({})
   const [celebNotes, setCelebNotes] = useState<Record<string, string>>({})
@@ -191,13 +194,24 @@ export default function MyProfile() {
 
   async function addDependent() {
     if (depForm.full_name.trim().length < 3) return void toast('Nombre requerido', 'warning')
-    const { data, error } = await supabase
-      .from('dependents')
-      .insert({ ...depForm, birth_date: depForm.birth_date || null, user_id: profile!.id })
-      .select().single()
-    if (error) return void toast(error.message, 'error')
-    setDeps((prev) => [...prev, data as Dependent])
+    const payload = { ...depForm, birth_date: depForm.birth_date || null, user_id: profile!.id }
+    if (editingDep) {
+      const { data, error } = await supabase.from('dependents').update(payload).eq('id', editingDep).select().single()
+      if (error) return void toast(error.message, 'error')
+      setDeps((prev) => prev.map((d) => (d.id === editingDep ? (data as Dependent) : d)))
+      setEditingDep(null)
+      toast('✓ Familiar actualizado')
+    } else {
+      const { data, error } = await supabase.from('dependents').insert(payload).select().single()
+      if (error) return void toast(error.message, 'error')
+      setDeps((prev) => [...prev, data as Dependent])
+    }
     setDepForm({ full_name: '', relationship: 'hijo', birth_date: '', lives_together: true, is_core_family: true })
+  }
+
+  function editDependent(d: Dependent) {
+    setDepForm({ full_name: d.full_name, relationship: d.relationship, birth_date: d.birth_date ?? '', lives_together: d.lives_together, is_core_family: d.is_core_family })
+    setEditingDep(d.id)
   }
 
   async function removeDependent(id: string) {
@@ -209,13 +223,24 @@ export default function MyProfile() {
     if (ecForm.full_name.trim().length < 3 || ecForm.phone.trim().length < 7) {
       return void toast('Nombre y teléfono requeridos', 'warning')
     }
-    const { data, error } = await supabase
-      .from('emergency_contacts')
-      .insert({ ...ecForm, user_id: profile!.id })
-      .select().single()
-    if (error) return void toast(error.message, 'error')
-    setContacts((prev) => [...prev, data as EmergencyContact])
+    const payload = { ...ecForm, user_id: profile!.id }
+    if (editingEc) {
+      const { data, error } = await supabase.from('emergency_contacts').update(payload).eq('id', editingEc).select().single()
+      if (error) return void toast(error.message, 'error')
+      setContacts((prev) => prev.map((c) => (c.id === editingEc ? (data as EmergencyContact) : c)))
+      setEditingEc(null)
+      toast('✓ Contacto actualizado')
+    } else {
+      const { data, error } = await supabase.from('emergency_contacts').insert(payload).select().single()
+      if (error) return void toast(error.message, 'error')
+      setContacts((prev) => [...prev, data as EmergencyContact])
+    }
     setEcForm({ full_name: '', relationship: '', phone: '' })
+  }
+
+  function editContact(c: EmergencyContact) {
+    setEcForm({ full_name: c.full_name, relationship: c.relationship, phone: c.phone })
+    setEditingEc(c.id)
   }
 
   async function removeContact(id: string) {
@@ -225,13 +250,24 @@ export default function MyProfile() {
 
   async function addPet() {
     if (petForm.name.trim().length < 2) return void toast('Nombre de la mascota requerido', 'warning')
-    const { data, error } = await supabase
-      .from('pets')
-      .insert({ ...petForm, breed: petForm.breed.trim() || null, birth_date: petForm.birth_date || null, user_id: profile!.id })
-      .select().single()
-    if (error) return void toast(error.message, 'error')
-    setPets((prev) => [...prev, data as Pet])
+    const payload = { ...petForm, breed: petForm.breed.trim() || null, birth_date: petForm.birth_date || null, user_id: profile!.id }
+    if (editingPet) {
+      const { data, error } = await supabase.from('pets').update(payload).eq('id', editingPet).select().single()
+      if (error) return void toast(error.message, 'error')
+      setPets((prev) => prev.map((p) => (p.id === editingPet ? (data as Pet) : p)))
+      setEditingPet(null)
+      toast('✓ Mascota actualizada')
+    } else {
+      const { data, error } = await supabase.from('pets').insert(payload).select().single()
+      if (error) return void toast(error.message, 'error')
+      setPets((prev) => [...prev, data as Pet])
+    }
     setPetForm({ name: '', species: 'perro', breed: '', birth_date: '' })
+  }
+
+  function editPet(p: Pet) {
+    setPetForm({ name: p.name, species: p.species, breed: p.breed ?? '', birth_date: p.birth_date ?? '' })
+    setEditingPet(p.id)
   }
 
   async function removePet(id: string) {
@@ -381,9 +417,14 @@ export default function MyProfile() {
                     {d.lives_together && <span className="ml-1.5 rounded-full bg-accent/15 px-2 py-0.5 text-[9px] font-bold text-yellow-700 uppercase">convive</span>}
                   </p>
                 </div>
-                <button onClick={() => removeDependent(d.id)} className="rounded-lg p-2 text-slate-400 hover:text-highlight" aria-label={`Eliminar ${d.full_name}`}>
-                  <span className="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
-                </button>
+                <div className="flex items-center">
+                  <button onClick={() => editDependent(d)} className="rounded-lg p-2 text-slate-400 hover:text-primary" aria-label={`Editar ${d.full_name}`}>
+                    <span className="material-symbols-outlined text-lg" aria-hidden="true">edit</span>
+                  </button>
+                  <button onClick={() => removeDependent(d.id)} className="rounded-lg p-2 text-slate-400 hover:text-highlight" aria-label={`Eliminar ${d.full_name}`}>
+                    <span className="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
+                  </button>
+                </div>
               </div>
             ))}
             <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_130px_145px_auto_auto_auto]">
@@ -400,8 +441,16 @@ export default function MyProfile() {
                 <input type="checkbox" checked={depForm.lives_together} onChange={(e) => setDepForm({ ...depForm, lives_together: e.target.checked })} className="rounded accent-[#16b79c]" />
                 Convive
               </label>
-              <button onClick={addDependent} className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:brightness-105">Agregar</button>
+              <button onClick={addDependent} className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:brightness-105">
+                {editingDep ? 'Guardar' : 'Agregar'}
+              </button>
             </div>
+            {editingDep && (
+              <button onClick={() => { setEditingDep(null); setDepForm({ full_name: '', relationship: 'hijo', birth_date: '', lives_together: true, is_core_family: true }) }}
+                className="mt-2 text-xs font-bold text-slate-400 hover:text-highlight">
+                Cancelar edición
+              </button>
+            )}
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -418,9 +467,14 @@ export default function MyProfile() {
                     {p.breed ? ` · ${p.breed}` : ''}{p.birth_date ? ` · ${age(p.birth_date)}` : ''}
                   </p>
                 </div>
-                <button onClick={() => removePet(p.id)} className="rounded-lg p-2 text-slate-400 hover:text-highlight" aria-label={`Eliminar ${p.name}`}>
-                  <span className="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
-                </button>
+                <div className="flex items-center">
+                  <button onClick={() => editPet(p)} className="rounded-lg p-2 text-slate-400 hover:text-primary" aria-label={`Editar ${p.name}`}>
+                    <span className="material-symbols-outlined text-lg" aria-hidden="true">edit</span>
+                  </button>
+                  <button onClick={() => removePet(p.id)} className="rounded-lg p-2 text-slate-400 hover:text-highlight" aria-label={`Eliminar ${p.name}`}>
+                    <span className="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
+                  </button>
+                </div>
               </div>
             ))}
             <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_130px_1fr_145px_auto]">
@@ -430,8 +484,16 @@ export default function MyProfile() {
               </select>
               <input value={petForm.breed} onChange={(e) => setPetForm({ ...petForm, breed: e.target.value })} className={input} placeholder="Raza (opcional)" aria-label="Raza" />
               <input type="date" value={petForm.birth_date} onChange={(e) => setPetForm({ ...petForm, birth_date: e.target.value })} className={input} aria-label="Fecha de nacimiento de la mascota" />
-              <button onClick={addPet} className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:brightness-105">Agregar</button>
+              <button onClick={addPet} className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:brightness-105">
+                {editingPet ? 'Guardar' : 'Agregar'}
+              </button>
             </div>
+            {editingPet && (
+              <button onClick={() => { setEditingPet(null); setPetForm({ name: '', species: 'perro', breed: '', birth_date: '' }) }}
+                className="mt-2 text-xs font-bold text-slate-400 hover:text-highlight">
+                Cancelar edición
+              </button>
+            )}
           </div>
 
           <div className="rounded-2xl border border-highlight/20 bg-white p-6 shadow-sm">
@@ -443,17 +505,30 @@ export default function MyProfile() {
                   <p className="text-sm font-bold text-slate-800">{c.full_name} <span className="font-normal text-slate-500">({c.relationship})</span></p>
                   <p className="text-[11px] font-bold text-highlight">{c.phone}{c.phone_alt ? ` · ${c.phone_alt}` : ''}</p>
                 </div>
-                <button onClick={() => removeContact(c.id)} className="rounded-lg p-2 text-slate-400 hover:text-highlight" aria-label={`Eliminar ${c.full_name}`}>
-                  <span className="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
-                </button>
+                <div className="flex items-center">
+                  <button onClick={() => editContact(c)} className="rounded-lg p-2 text-slate-400 hover:text-primary" aria-label={`Editar ${c.full_name}`}>
+                    <span className="material-symbols-outlined text-lg" aria-hidden="true">edit</span>
+                  </button>
+                  <button onClick={() => removeContact(c.id)} className="rounded-lg p-2 text-slate-400 hover:text-highlight" aria-label={`Eliminar ${c.full_name}`}>
+                    <span className="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
+                  </button>
+                </div>
               </div>
             ))}
             <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_160px_160px_auto]">
               <input value={ecForm.full_name} onChange={(e) => setEcForm({ ...ecForm, full_name: e.target.value })} className={input} placeholder="Nombre completo" aria-label="Nombre del contacto" />
               <input value={ecForm.relationship} onChange={(e) => setEcForm({ ...ecForm, relationship: e.target.value })} className={input} placeholder="Parentesco" aria-label="Parentesco del contacto" />
               <input value={ecForm.phone} onChange={(e) => setEcForm({ ...ecForm, phone: e.target.value })} className={input} placeholder="Teléfono" aria-label="Teléfono del contacto" />
-              <button onClick={addContact} className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:brightness-105">Agregar</button>
+              <button onClick={addContact} className="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:brightness-105">
+                {editingEc ? 'Guardar' : 'Agregar'}
+              </button>
             </div>
+            {editingEc && (
+              <button onClick={() => { setEditingEc(null); setEcForm({ full_name: '', relationship: '', phone: '' }) }}
+                className="mt-2 text-xs font-bold text-slate-400 hover:text-highlight">
+                Cancelar edición
+              </button>
+            )}
           </div>
         </>
       )}
