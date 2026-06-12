@@ -29,7 +29,26 @@ interface Invitation {
   created_at: string
 }
 
-type Tab = 'areas' | 'cargos' | 'equipos' | 'invitaciones'
+interface WorkType {
+  key: string
+  name: string
+  description: string | null
+  sort_order: number
+  is_active: boolean
+}
+
+type Tab = 'areas' | 'cargos' | 'equipos' | 'labores' | 'invitaciones'
+
+/** Genera la clave técnica a partir del nombre (sin tildes ni espacios) */
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '')
+    .slice(0, 30)
+}
 
 const EMPTY_INV = { email: '', name: '', role: 'colaborador', area_id: '', team_id: '', manager_id: '', position_id: '', position_title: '', role_type: 'default' }
 const LEVEL_LABELS = ['Nivel 0 — Dirección', 'Nivel 1 — Liderazgo', 'Nivel 2 — Equipo', 'Nivel 3 — Apoyo']
@@ -50,6 +69,10 @@ export default function AdminOrganization() {
   const [posForm, setPosForm] = useState({ name: '', level: 2, description: '' })
   const [teamForm, setTeamForm] = useState({ name: '', description: '', area_id: '' })
   const [invForm, setInvForm] = useState(EMPTY_INV)
+  const [workTypes, setWorkTypes] = useState<WorkType[]>([])
+  const [wtForm, setWtForm] = useState({ name: '', description: '' })
+  const [editingWt, setEditingWt] = useState<string | null>(null)
+  const [wtEditForm, setWtEditForm] = useState({ name: '', description: '' })
 
   const [editing, setEditing] = useState<{ kind: 'area' | 'pos' | 'team'; id: string } | null>(null)
   const [editForm, setEditForm] = useState<Record<string, string | number>>({})
@@ -66,7 +89,9 @@ export default function AdminOrganization() {
       supabase.from('invitations').select('*').order('created_at', { ascending: false }),
       supabase.from('profiles').select('*').eq('is_active', true).order('name'),
       supabase.from('position_assignments').select('position_id'),
-    ]).then(([a, p, t, i, pr, pa]) => {
+      supabase.from('work_types').select('*').order('sort_order'),
+    ]).then(([a, p, t, i, pr, pa, wt]) => {
+      setWorkTypes((wt.data as WorkType[]) ?? [])
       setAreas((a.data as Area[]) ?? [])
       setPositions((p.data as Position[]) ?? [])
       setTeams((t.data as Team[]) ?? [])
@@ -319,6 +344,61 @@ export default function AdminOrganization() {
     toast('✓ Equipo eliminado — integrantes sin equipo')
   }
 
+  // ---------- tipos de labor ----------
+  const wtUsage = (key: string) => profiles.filter((p) => p.role_type === key).length
+
+  async function addWorkType() {
+    if (wtForm.name.trim().length < 3) return void toast('Nombre del tipo de labor requerido', 'warning')
+    const key = slugify(wtForm.name)
+    if (!key) return void toast('Nombre inválido', 'warning')
+    if (workTypes.some((w) => w.key === key)) return void toast('Ya existe un tipo con ese nombre', 'warning')
+    const { data, error } = await supabase
+      .from('work_types')
+      .insert({ key, name: wtForm.name.trim(), description: wtForm.description.trim() || null, sort_order: workTypes.length })
+      .select().single()
+    if (error) return void toast(error.message, 'error')
+    setWorkTypes((prev) => [...prev, data as WorkType])
+    setWtForm({ name: '', description: '' })
+    toast('✓ Tipo de labor creado')
+  }
+
+  async function saveWorkType(key: string) {
+    if (wtEditForm.name.trim().length < 3) return void toast('Nombre requerido', 'warning')
+    const { data, error } = await supabase
+      .from('work_types')
+      .update({ name: wtEditForm.name.trim(), description: wtEditForm.description.trim() || null })
+      .eq('key', key).select().single()
+    if (error) return void toast(error.message, 'error')
+    setWorkTypes((prev) => prev.map((w) => (w.key === key ? (data as WorkType) : w)))
+    setEditingWt(null)
+    toast('✓ Tipo de labor actualizado')
+  }
+
+  async function toggleWorkType(w: WorkType) {
+    if (w.key === 'default') return void toast('El tipo General no se puede ocultar', 'warning')
+    const { error } = await supabase.from('work_types').update({ is_active: !w.is_active }).eq('key', w.key)
+    if (error) return void toast(error.message, 'error')
+    setWorkTypes((prev) => prev.map((x) => (x.key === w.key ? { ...x, is_active: !w.is_active } : x)))
+  }
+
+  async function deleteWorkType(w: WorkType) {
+    if (w.key === 'default') return void toast('El tipo General no se puede eliminar', 'warning')
+    const uses = wtUsage(w.key)
+    const msg = uses > 0
+      ? `"${w.name}" está asignado a ${uses} persona(s); pasarán al tipo General. Las competencias y habilidades de este tipo quedarán como transversales. ¿Eliminar?`
+      : `¿Eliminar el tipo de labor "${w.name}"?`
+    if (!window.confirm(msg)) return
+    // reasignar referencias antes de borrar
+    await supabase.from('profiles').update({ role_type: 'default' }).eq('role_type', w.key)
+    await supabase.from('skills').update({ role_type: null }).eq('role_type', w.key)
+    await supabase.from('catalog_items').update({ role_type: null }).eq('role_type', w.key)
+    const { error } = await supabase.from('work_types').delete().eq('key', w.key)
+    if (error) return void toast(error.message, 'error')
+    setWorkTypes((prev) => prev.filter((x) => x.key !== w.key))
+    setProfiles((prev) => prev.map((p) => (p.role_type === w.key ? { ...p, role_type: 'default' } : p)))
+    toast('✓ Tipo eliminado — personas reasignadas a General')
+  }
+
   // ---------- invitaciones ----------
   async function invite() {
     if (!/^\S+@\S+\.\S+$/.test(invForm.email.trim())) return void toast('Email inválido', 'warning')
@@ -517,7 +597,7 @@ export default function AdminOrganization() {
       </div>
 
       <div role="tablist" className="scrollbar-hide flex gap-1 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5">
-        {([['areas', 'Áreas', 'account_tree'], ['cargos', 'Cargos', 'badge'], ['equipos', 'Equipos', 'groups'], ['invitaciones', 'Invitaciones', 'person_add']] as [Tab, string, string][]).map(([k, label, icon]) => (
+        {([['areas', 'Áreas', 'account_tree'], ['cargos', 'Cargos', 'badge'], ['equipos', 'Equipos', 'groups'], ['labores', 'Tipos de labor', 'work'], ['invitaciones', 'Invitaciones', 'person_add']] as [Tab, string, string][]).map(([k, label, icon]) => (
           <button key={k} role="tab" aria-selected={tab === k} onClick={() => { setTab(k); setEditing(null); setDeletingArea(null) }}
             className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-xs font-bold whitespace-nowrap transition-all ${tab === k ? 'bg-primary text-white shadow-md shadow-primary/20' : 'text-slate-500 hover:bg-slate-50'}`}>
             <span className="material-symbols-outlined text-base" aria-hidden="true">{icon}</span>
@@ -687,6 +767,75 @@ export default function AdminOrganization() {
             })}
           </div>
         </>
+      ) : tab === 'labores' ? (
+        <>
+          <p className="rounded-2xl border border-slate-200 bg-white px-5 py-3 text-[11px] leading-relaxed text-slate-500">
+            Los <strong>tipos de labor</strong> determinan qué habilidades específicas se evalúan a cada persona
+            (en la autoevaluación y en Competencias 360). Se asignan por persona en el Directorio o al invitar.
+          </p>
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h3 className="mb-3 text-sm font-bold text-slate-900">Nuevo tipo de labor</h3>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <input value={wtForm.name} onChange={(e) => setWtForm({ ...wtForm, name: e.target.value })} className={input} placeholder="Nombre (ej: Pedagogía) *" aria-label="Nombre del tipo de labor" />
+              <input value={wtForm.description} onChange={(e) => setWtForm({ ...wtForm, description: e.target.value })} className={input} placeholder="Descripción (qué roles agrupa)" aria-label="Descripción del tipo" />
+            </div>
+            <button onClick={addWorkType} className="mt-3 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white hover:brightness-105">Crear tipo</button>
+          </div>
+          <div className="space-y-2">
+            {workTypes.map((w) => {
+              const uses = wtUsage(w.key)
+              const isEditingThis = editingWt === w.key
+              return (
+                <div key={w.key} className={`rounded-2xl border bg-white p-4 shadow-sm ${isEditingThis ? 'border-primary ring-2 ring-primary/20' : w.is_active ? 'border-slate-200' : 'border-dashed border-slate-300 opacity-60'}`}>
+                  {isEditingThis ? (
+                    <div>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <input value={wtEditForm.name} onChange={(e) => setWtEditForm({ ...wtEditForm, name: e.target.value })} className={input} aria-label="Nombre" placeholder="Nombre *" />
+                        <input value={wtEditForm.description} onChange={(e) => setWtEditForm({ ...wtEditForm, description: e.target.value })} className={input} aria-label="Descripción" placeholder="Descripción" />
+                      </div>
+                      <div className="mt-3 flex gap-2">
+                        <button onClick={() => saveWorkType(w.key)} className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white hover:brightness-105">Guardar</button>
+                        <button onClick={() => setEditingWt(null)} className="rounded-xl px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100">Cancelar</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-slate-900">
+                          {w.name}
+                          <span className="ml-2 rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-[9px] font-bold text-slate-400">{w.key}</span>
+                          {!w.is_active && <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-400 uppercase">Oculto</span>}
+                          {uses > 0 && <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">{uses} persona{uses === 1 ? '' : 's'}</span>}
+                        </p>
+                        {w.description && <p className="mt-0.5 text-[11px] text-slate-400 italic">{w.description}</p>}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => { setEditingWt(w.key); setWtEditForm({ name: w.name, description: w.description ?? '' }) }} className={`${iconBtn} hover:text-primary`} aria-label={`Editar ${w.name}`}>
+                          <span className="material-symbols-outlined text-lg" aria-hidden="true">edit</span>
+                        </button>
+                        {w.key !== 'default' && (
+                          <>
+                            <button
+                              onClick={() => toggleWorkType(w)}
+                              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${w.is_active ? 'text-slate-400 hover:bg-slate-100 hover:text-highlight' : 'bg-primary/10 text-primary hover:bg-primary/20'}`}
+                              aria-label={`${w.is_active ? 'Ocultar' : 'Reactivar'} ${w.name}`}
+                            >
+                              <span className="material-symbols-outlined text-base" aria-hidden="true">{w.is_active ? 'visibility_off' : 'visibility'}</span>
+                              {w.is_active ? 'Ocultar' : 'Reactivar'}
+                            </button>
+                            <button onClick={() => deleteWorkType(w)} className={`${iconBtn} hover:text-highlight`} aria-label={`Eliminar ${w.name}`}>
+                              <span className="material-symbols-outlined text-lg" aria-hidden="true">delete</span>
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </>
       ) : (
         <>
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -718,7 +867,7 @@ export default function AdminOrganization() {
                 {profiles.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
               <select value={invForm.role_type} onChange={(e) => setInvForm({ ...invForm, role_type: e.target.value })} className={input} aria-label="Tipo de labor">
-                {['default', 'designer', 'engineer', 'marketing'].map((rt) => <option key={rt} value={rt}>{rt === 'default' ? 'general' : rt}</option>)}
+                {workTypes.filter((w) => w.is_active).map((w) => <option key={w.key} value={w.key}>{w.name}</option>)}
               </select>
             </div>
             <button onClick={invite} className="mt-3 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary/20 hover:brightness-105">

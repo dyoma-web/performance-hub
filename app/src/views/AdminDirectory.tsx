@@ -13,6 +13,7 @@ export default function AdminDirectory() {
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [areas, setAreas] = useState<{ id: string; name: string }[]>([])
+  const [workTypes, setWorkTypes] = useState<{ key: string; name: string; is_active: boolean }[]>([])
   const [loading, setLoading] = useState(true)
   // crear usuario
   const [creating, setCreating] = useState(false)
@@ -28,10 +29,12 @@ export default function AdminDirectory() {
       supabase.from('profiles').select('*').order('name'),
       supabase.from('teams').select('*').order('name'),
       supabase.from('areas').select('id,name').order('sort_order'),
-    ]).then(([p, t, a]) => {
+      supabase.from('work_types').select('key,name,is_active').order('sort_order'),
+    ]).then(([p, t, a, wt]) => {
       setProfiles((p.data as Profile[]) ?? [])
       setTeams((t.data as Team[]) ?? [])
       setAreas(a.data ?? [])
+      setWorkTypes(wt.data ?? [])
       setLoading(false)
     })
   }, [])
@@ -308,9 +311,9 @@ export default function AdminDirectory() {
                       aria-label={`Tipo de labor de ${p.name}`}
                       className={selectCls}
                     >
-                      {['default', 'designer', 'engineer', 'marketing'].map((rt) => (
-                        <option key={rt} value={rt}>{rt === 'default' ? 'general' : rt}</option>
-                      ))}
+                      {workTypes
+                        .filter((w) => w.is_active || w.key === p.role_type)
+                        .map((w) => <option key={w.key} value={w.key}>{w.name}</option>)}
                     </select>
                   </div>
                 </div>
