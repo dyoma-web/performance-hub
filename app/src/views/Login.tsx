@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase'
 const DEMO_ACCOUNTS = [
   { email: 'alejandra@demo360.co', label: 'Alejandra Rivera', role: 'Colaboradora · Diseño' },
   { email: 'sara@demo360.co', label: 'Sara Méndez', role: 'Facilitadora · Diseño' },
-  { email: 'daniela@demo360.co', label: 'Daniela Ruiz', role: 'People Ops (Admin)' },
+  { email: 'jorge@demo360.co', label: 'Jorge Castillo', role: 'Facilitador · Ingeniería' },
 ]
 
 export default function Login() {
