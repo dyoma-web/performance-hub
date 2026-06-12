@@ -150,6 +150,10 @@ export default function MyProfile() {
       toast('Debes autorizar el tratamiento de tus datos personales para guardar', 'warning')
       return
     }
+    if (pi.document_number?.trim() && !pi.document_type) {
+      toast('Selecciona el tipo de documento', 'warning')
+      return
+    }
     setSaving(true)
     const payload = {
       ...pi,
@@ -158,7 +162,14 @@ export default function MyProfile() {
     }
     const { data, error } = await supabase.from('personal_info').upsert(payload).select().single()
     setSaving(false)
-    if (error) return void toast(error.message, 'error')
+    if (error) {
+      if (error.code === '23505' || error.message.includes('personal_info_document_unique')) {
+        toast('Ese número de documento ya está registrado por otra persona — verifica el número o contacta a Talento Humano', 'error')
+      } else {
+        toast(error.message, 'error')
+      }
+      return
+    }
     setPi(data as PersonalInfo)
     toast('✓ Datos personales guardados — solo tú y Talento Humano pueden verlos')
   }

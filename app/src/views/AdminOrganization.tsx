@@ -402,6 +402,10 @@ export default function AdminOrganization() {
   // ---------- invitaciones ----------
   async function invite() {
     if (!/^\S+@\S+\.\S+$/.test(invForm.email.trim())) return void toast('Email inválido', 'warning')
+    const emailLower = invForm.email.trim().toLowerCase()
+    if (profiles.some((p) => p.email.toLowerCase() === emailLower)) {
+      return void toast('Ya existe un usuario con ese correo — búscalo en el Directorio', 'error')
+    }
     const { data, error } = await supabase
       .from('invitations')
       .insert({
