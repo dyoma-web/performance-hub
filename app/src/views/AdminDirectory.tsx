@@ -8,7 +8,7 @@ import { roleLabel } from '../lib/labels'
 import type { Profile, Role, Team } from '../types'
 
 export default function AdminDirectory() {
-  const { profile } = useAuth()
+  const { profile, isAdmin } = useAuth()
   const toast = useToast()
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [teams, setTeams] = useState<Team[]>([])
@@ -39,7 +39,7 @@ export default function AdminDirectory() {
     })
   }, [])
 
-  if (!profile || profile.role !== 'admin') return <p className="py-12 text-center text-sm text-slate-400">Solo People Ops puede gestionar el directorio.</p>
+  if (!profile || !isAdmin) return <p className="py-12 text-center text-sm text-slate-400">Solo People Ops puede gestionar el directorio.</p>
 
   function genTempPassword(): string {
     const bytes = new Uint8Array(6)

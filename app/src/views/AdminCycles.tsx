@@ -14,7 +14,7 @@ const WEIGHT_KEYS = [
 ] as const
 
 export default function AdminCycles() {
-  const { profile } = useAuth()
+  const { profile, isAdmin } = useAuth()
   const toast = useToast()
   const [cycles, setCycles] = useState<Cycle[]>([])
   const [editing, setEditing] = useState<string | null>(null)
@@ -29,7 +29,7 @@ export default function AdminCycles() {
     })
   }, [])
 
-  if (!profile || profile.role !== 'admin') return <p className="py-12 text-center text-sm text-slate-400">Solo People Ops puede gestionar ciclos.</p>
+  if (!profile || !isAdmin) return <p className="py-12 text-center text-sm text-slate-400">Solo People Ops puede gestionar ciclos.</p>
 
   function startEdit(c: Cycle) {
     setEditing(c.id)

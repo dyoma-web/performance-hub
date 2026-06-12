@@ -54,7 +54,7 @@ const EMPTY_INV = { email: '', name: '', role: 'colaborador', area_id: '', team_
 const LEVEL_LABELS = ['Nivel 0 — Dirección', 'Nivel 1 — Liderazgo', 'Nivel 2 — Equipo', 'Nivel 3 — Apoyo']
 
 export default function AdminOrganization() {
-  const { profile } = useAuth()
+  const { profile, isAdmin } = useAuth()
   const toast = useToast()
   const [tab, setTab] = useState<Tab>('areas')
   const [areas, setAreas] = useState<Area[]>([])
@@ -104,7 +104,7 @@ export default function AdminOrganization() {
     })
   }, [])
 
-  if (!profile || profile.role !== 'admin') {
+  if (!profile || !isAdmin) {
     return <p className="py-12 text-center text-sm text-slate-400">Solo People Ops puede gestionar la organización.</p>
   }
 

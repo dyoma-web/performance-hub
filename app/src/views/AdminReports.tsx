@@ -20,7 +20,7 @@ function downloadCsv(filename: string, rows: (string | number | null)[][]) {
 }
 
 export default function AdminReports() {
-  const { profile } = useAuth()
+  const { profile, isAdmin } = useAuth()
   const { cycle } = useOutletContext<{ cycle: Cycle | null }>()
   const toast = useToast()
   const [profiles, setProfiles] = useState<Profile[]>([])
@@ -82,7 +82,7 @@ export default function AdminReports() {
     }
   }, [items])
 
-  if (!profile || profile.role !== 'admin') return <p className="py-12 text-center text-sm text-slate-400">Solo People Ops puede ver reportes.</p>
+  if (!profile || !isAdmin) return <p className="py-12 text-center text-sm text-slate-400">Solo People Ops puede ver reportes.</p>
   if (!cycle) return null
 
   function exportReviews() {

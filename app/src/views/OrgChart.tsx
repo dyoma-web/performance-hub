@@ -33,7 +33,7 @@ const SCOPES: [string, string][] = [
 ]
 
 export default function OrgChart() {
-  const { profile } = useAuth()
+  const { profile, isAdmin } = useAuth()
   const toast = useToast()
   const [people, setPeople] = useState<Profile[]>([])
   const [areas, setAreas] = useState<Area[]>([])
@@ -67,7 +67,7 @@ export default function OrgChart() {
 
   const scope = useMemo(() => {
     if (!profile) return 'company'
-    if (profile.role === 'admin') return 'company'
+    if (isAdmin) return 'company'
     return (settings.role_overrides[profile.role] as OrgSettings['chart_visibility']) ?? settings.chart_visibility
   }, [profile, settings])
 
@@ -299,7 +299,7 @@ export default function OrgChart() {
         </div>
       </div>
 
-      {profile.role === 'admin' && (
+      {isAdmin && (
         <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-slate-200 bg-white px-5 py-4">
           <span className="text-xs font-bold text-slate-600">Visibilidad por defecto:</span>
           <select

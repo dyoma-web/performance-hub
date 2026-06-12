@@ -18,7 +18,7 @@ interface Calibration {
 }
 
 export default function AdminCalibration() {
-  const { profile } = useAuth()
+  const { profile, isAdmin } = useAuth()
   const { cycle } = useOutletContext<{ cycle: Cycle | null }>()
   const toast = useToast()
   const [profiles, setProfiles] = useState<Profile[]>([])
@@ -107,7 +107,7 @@ export default function AdminCalibration() {
     return out
   }, [items, teams, profiles, facReviews])
 
-  if (!profile || profile.role !== 'admin') return <p className="py-12 text-center text-sm text-slate-400">Solo People Ops puede calibrar.</p>
+  if (!profile || !isAdmin) return <p className="py-12 text-center text-sm text-slate-400">Solo People Ops puede calibrar.</p>
   if (!cycle) return null
 
   async function saveCalibration(evaluateeId: string, original: number) {

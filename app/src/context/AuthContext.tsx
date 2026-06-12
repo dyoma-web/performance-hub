@@ -2,11 +2,14 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
-import type { Profile } from '../types'
+import type { Profile, Role } from '../types'
 
 interface AuthState {
   session: Session | null
   profile: Profile | null
+  /** Todos los roles de la persona (primario + adicionales de user_roles) */
+  roles: Role[]
+  isAdmin: boolean
   loading: boolean
   signIn: (email: string, password: string) => Promise<string | null>
   signOut: () => Promise<void>
@@ -18,6 +21,7 @@ const AuthContext = createContext<AuthState | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [roles, setRoles] = useState<Role[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -39,17 +43,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const userId = session?.user.id
     if (!userId) return
     let cancelled = false
-    supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single()
-      .then(({ data }) => {
-        if (!cancelled) {
-          setProfile(data as Profile | null)
-          setLoading(false)
-        }
-      })
+    Promise.all([
+      supabase.from('profiles').select('*').eq('id', userId).single(),
+      supabase.from('user_roles').select('role').eq('user_id', userId),
+    ]).then(([p, r]) => {
+      if (cancelled) return
+      const prof = p.data as Profile | null
+      setProfile(prof)
+      const extra = ((r.data ?? []) as { role: Role }[]).map((x) => x.role)
+      setRoles(Array.from(new Set([...(prof ? [prof.role] : []), ...extra])))
+      setLoading(false)
+    })
     return () => {
       cancelled = true
     }
@@ -77,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, profile, loading, signIn, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ session, profile, roles, isAdmin: roles.includes('admin'), loading, signIn, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   )

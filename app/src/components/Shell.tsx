@@ -12,48 +12,47 @@ interface NavItem {
   label: string
 }
 
-function navItems(role: Role): NavItem[] {
-  const base: NavItem[] = [
+function navItems(roles: Role[]): NavItem[] {
+  const items: NavItem[] = [
     { to: '/', icon: 'dashboard', label: 'Dashboard' },
     { to: '/mi-perfil', icon: 'person', label: 'Mi Perfil' },
     { to: '/trayectoria', icon: 'history_edu', label: 'Mi Trayectoria' },
     { to: '/competencias', icon: 'radar', label: 'Competencias' },
     { to: '/organigrama', icon: 'lan', label: 'Organigrama' },
   ]
-  if (role === 'colaborador') {
-    return [
-      ...base,
+  // Multi-rol: el menú es la unión de lo que cada rol habilita
+  if (roles.includes('colaborador')) {
+    items.push(
       { to: '/objetivos', icon: 'flag', label: 'Mis Objetivos' },
       { to: '/mi-evaluacion', icon: 'rate_review', label: 'Mi Evaluación' },
       { to: '/check-in', icon: 'event_available', label: 'Check-in Mensual' },
       { to: '/feedback', icon: 'reviews', label: 'Feedback a Pares' },
       { to: '/reuniones', icon: 'handshake', label: 'Reunión 1:1' },
       { to: '/mi-desarrollo', icon: 'trending_up', label: 'Mi Desarrollo' },
-    ]
+    )
   }
-  if (role === 'facilitador') {
-    return [
-      ...base,
+  if (roles.includes('facilitador')) {
+    items.push(
       { to: '/equipo', icon: 'groups', label: 'Mi Equipo' },
       { to: '/feedback', icon: 'reviews', label: 'Feedback a Pares' },
       { to: '/reuniones', icon: 'handshake', label: 'Reuniones 1:1' },
-    ]
+    )
   }
-  if (role === 'admin') {
-    return [
-      ...base,
+  if (roles.includes('admin')) {
+    items.push(
       { to: '/ciclos', icon: 'rebase_edit', label: 'Ciclos' },
       { to: '/calibracion', icon: 'tune', label: 'Calibración' },
       { to: '/reportes', icon: 'assessment', label: 'Reportes' },
       { to: '/directorio', icon: 'group', label: 'Directorio' },
       { to: '/organizacion', icon: 'account_tree', label: 'Organización' },
-    ]
+    )
   }
-  return base
+  // dedupe conservando el orden
+  return items.filter((it, i) => items.findIndex((x) => x.to === it.to) === i)
 }
 
 export default function Shell() {
-  const { profile, signOut } = useAuth()
+  const { profile, roles, signOut } = useAuth()
   const [cycle, setCycle] = useState<Cycle | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
@@ -110,7 +109,7 @@ export default function Shell() {
         </div>
 
         <nav className="mt-2 flex-1 space-y-1 overflow-y-auto px-4" aria-label="Navegación principal">
-          {navItems(profile.role).map((item) => (
+          {navItems(roles).map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

@@ -28,7 +28,7 @@ const age = (birth: unknown) =>
 
 export default function PersonProfile() {
   const { userId } = useParams()
-  const { profile } = useAuth()
+  const { profile, isAdmin } = useAuth()
   const toast = useToast()
   const [person, setPerson] = useState<Profile | null>(null)
   const [manager, setManager] = useState<Profile | null>(null)
@@ -144,7 +144,6 @@ export default function PersonProfile() {
     )
   }
 
-  const isAdmin = profile.role === 'admin'
   const tenure = person.hire_date
     ? `${(Math.floor((Date.now() - new Date(person.hire_date + 'T00:00:00').getTime()) / (365.25 * 8640000)) / 10).toFixed(1)} años en la empresa`
     : null
