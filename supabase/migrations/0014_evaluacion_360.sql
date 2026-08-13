@@ -528,8 +528,12 @@ insert into public.wellbeing_questions (code, category, question, sort_order) va
 
 -- ------------------------------------------------------------
 -- 14. SEED — Familia demo por tipo de rol existente
+-- (el trigger de protección exige un usuario admin/talento; la
+--  migración corre como postgres sin sesión, así que se pausa)
 -- ------------------------------------------------------------
+alter table public.profiles disable trigger profiles_protect;
 update public.profiles set family_id = '00000000-0000-4000-f000-000000000002' where role_type = 'designer';
 update public.profiles set family_id = '00000000-0000-4000-f000-000000000004' where role_type = 'engineer';
 update public.profiles set family_id = '00000000-0000-4000-f000-000000000001' where role_type = 'marketing';
 update public.profiles set family_id = '00000000-0000-4000-f000-000000000003' where family_id is null;
+alter table public.profiles enable trigger profiles_protect;
