@@ -11,7 +11,7 @@ const DEMO_ACCOUNTS = [
 
 export default function Login() {
   const { session, signIn } = useAuth()
-  const [mode, setMode] = useState<'login' | 'signup'>('login')
+  const [mode, setMode] = useState<'login' | 'signup' | 'reset'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
@@ -29,6 +29,14 @@ export default function Login() {
     if (mode === 'login') {
       const err = await signIn(email.trim(), password)
       if (err) setError(err)
+    } else if (mode === 'reset') {
+      // Vuelve a la app (raíz del deploy); supabase-js detecta el token del
+      // enlace y AuthContext activa el modo recuperación.
+      const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: window.location.origin + window.location.pathname,
+      })
+      if (err) setError(err.message)
+      else setInfo('Si el correo está registrado, recibirás un enlace para restablecer tu contraseña. Revisa también la carpeta de spam.')
     } else {
       const { data, error: err } = await supabase.auth.signUp({
         email: email.trim(),
@@ -99,21 +107,28 @@ export default function Login() {
                 placeholder="tu@empresa.com"
               />
             </div>
-            <div>
-              <label htmlFor="password" className="mb-1.5 block text-xs font-bold text-slate-600">
-                Contraseña
-              </label>
-              <input
-                id="password"
-                type="password"
-                required
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary/30 focus:outline-none"
-                placeholder="••••••••"
-              />
-            </div>
+            {mode !== 'reset' && (
+              <div>
+                <label htmlFor="password" className="mb-1.5 block text-xs font-bold text-slate-600">
+                  Contraseña
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  required
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary/30 focus:outline-none"
+                  placeholder="••••••••"
+                />
+              </div>
+            )}
+            {mode === 'reset' && (
+              <p className="text-xs leading-relaxed text-slate-500">
+                Te enviaremos un enlace a tu correo para que definas una nueva contraseña.
+              </p>
+            )}
           </div>
 
           {error && (
@@ -132,9 +147,22 @@ export default function Login() {
             disabled={submitting}
             className="mt-6 w-full rounded-xl bg-primary py-3 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:brightness-105 disabled:opacity-60"
           >
-            {submitting ? 'Procesando…' : mode === 'login' ? 'Ingresar' : 'Crear cuenta'}
+            {submitting ? 'Procesando…' : mode === 'login' ? 'Ingresar' : mode === 'reset' ? 'Enviar enlace' : 'Crear cuenta'}
           </button>
 
+          {mode === 'login' && (
+            <button
+              type="button"
+              onClick={() => {
+                setMode('reset')
+                setError(null)
+                setInfo(null)
+              }}
+              className="mt-3 w-full text-center text-xs font-bold text-slate-400 hover:text-primary"
+            >
+              ¿Olvidaste tu contraseña?
+            </button>
+          )}
           <button
             type="button"
             onClick={() => {

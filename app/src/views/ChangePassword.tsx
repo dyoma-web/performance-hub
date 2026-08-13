@@ -6,10 +6,11 @@ import { useToast } from '../components/Toast'
 
 /**
  * Cambio de contraseña. En modo `forced` (primer ingreso con contraseña
- * temporal) se muestra a pantalla completa y bloquea el resto de la app.
+ * temporal) o `recovery` (enlace de "olvidé mi contraseña") se muestra a
+ * pantalla completa y bloquea el resto de la app.
  */
-export default function ChangePassword({ forced = false }: { forced?: boolean }) {
-  const { profile, refreshProfile, signOut } = useAuth()
+export default function ChangePassword({ forced = false, recovery = false }: { forced?: boolean; recovery?: boolean }) {
+  const { profile, refreshProfile, signOut, clearRecovery } = useAuth()
   const toast = useToast()
   const navigate = useNavigate()
   const [password, setPassword] = useState('')
@@ -38,22 +39,32 @@ export default function ChangePassword({ forced = false }: { forced?: boolean })
     }
     setSaving(false)
     toast('✓ Contraseña actualizada')
-    if (!forced) navigate('/')
+    if (recovery) clearRecovery()
+    else if (!forced) navigate('/')
   }
 
   const form = (
     <form onSubmit={handleSubmit} className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/50 sm:p-8">
-      {forced && (
+      {(forced || recovery) && (
         <div className="mb-5 flex items-start gap-3 rounded-xl border border-accent/30 bg-accent/5 p-4">
           <span className="material-symbols-outlined text-accent" aria-hidden="true">key</span>
           <p className="text-xs leading-relaxed text-slate-600">
-            <strong>Hola, {profile?.name.split(' ')[0]}.</strong> Estás usando una contraseña temporal —
-            por seguridad debes definir la tuya antes de continuar.
+            {recovery ? (
+              <>
+                <strong>Recuperación de acceso.</strong> Entraste con el enlace de tu correo —
+                define tu nueva contraseña para continuar.
+              </>
+            ) : (
+              <>
+                <strong>Hola, {profile?.name.split(' ')[0]}.</strong> Estás usando una contraseña temporal —
+                por seguridad debes definir la tuya antes de continuar.
+              </>
+            )}
           </p>
         </div>
       )}
       <h2 className="text-lg font-extrabold tracking-tight text-slate-900">
-        {forced ? 'Crea tu contraseña' : 'Cambiar contraseña'}
+        {recovery ? 'Nueva contraseña' : forced ? 'Crea tu contraseña' : 'Cambiar contraseña'}
       </h2>
       <div className="mt-4 space-y-4">
         <div>
@@ -89,10 +100,22 @@ export default function ChangePassword({ forced = false }: { forced?: boolean })
           Salir sin cambiarla (no podrás usar la plataforma)
         </button>
       )}
+      {recovery && (
+        <button
+          type="button"
+          onClick={async () => {
+            await signOut()
+            clearRecovery()
+          }}
+          className="mt-3 w-full text-center text-xs font-bold text-slate-400 hover:text-highlight"
+        >
+          Cancelar y volver al inicio de sesión
+        </button>
+      )}
     </form>
   )
 
-  if (forced) {
+  if (forced || recovery) {
     return (
       <div className="flex min-h-screen items-center justify-center p-4">
         <div className="view-enter flex w-full flex-col items-center">

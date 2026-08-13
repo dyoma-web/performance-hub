@@ -11,6 +11,9 @@ interface AuthState {
   roles: Role[]
   isAdmin: boolean
   loading: boolean
+  /** true si la sesión viene de un enlace de recuperación de contraseña */
+  recovery: boolean
+  clearRecovery: () => void
   signIn: (email: string, password: string) => Promise<string | null>
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
@@ -23,13 +26,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [roles, setRoles] = useState<Role[]>([])
   const [loading, setLoading] = useState(true)
+  const [recovery, setRecovery] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
       if (!data.session) setLoading(false)
     })
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (event === 'PASSWORD_RECOVERY') setRecovery(true)
       setSession(newSession)
       if (!newSession) {
         setProfile(null)
@@ -81,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ session, profile, roles, isAdmin: roles.includes('admin'), loading, signIn, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ session, profile, roles, isAdmin: roles.includes('admin'), loading, recovery, clearRecovery: () => setRecovery(false), signIn, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   )

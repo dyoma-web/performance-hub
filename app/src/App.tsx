@@ -46,9 +46,11 @@ function ViewLoading() {
 }
 
 function RequireAuth({ children }: { children: ReactNode }) {
-  const { session, loading, profile } = useAuth()
+  const { session, loading, profile, recovery } = useAuth()
   if (loading) return <LoadingScreen />
   if (!session) return <Navigate to="/login" replace />
+  // Enlace de recuperación: pedir la nueva contraseña antes de entrar
+  if (recovery) return <ChangePassword recovery />
   // Contraseña temporal: bloquear la app hasta que defina la suya
   if (profile?.must_change_password) return <ChangePassword forced />
   return <>{children}</>
