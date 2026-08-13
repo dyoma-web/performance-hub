@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { competenciesForAssignment, isLeader, reviewTypeFor } from './eval360'
+import { competenciesForAssignment, daysUntil, deadlineUrgency, isLeader, reviewTypeFor } from './eval360'
 import type { Competency } from '../types'
 
 const comp = (code: string, comp_type: Competency['comp_type'], family_id: string | null = null, sort = 0): Competency => ({
@@ -101,5 +101,22 @@ describe('reviewTypeFor', () => {
     expect(reviewTypeFor('auto')).toBe('self')
     expect(reviewTypeFor('lider')).toBe('facilitator')
     expect(reviewTypeFor('par')).toBe('peer')
+  })
+})
+
+describe('fecha límite', () => {
+  const now = new Date('2026-08-13T10:00:00')
+
+  it('calcula días restantes hasta fin del día', () => {
+    expect(daysUntil('2026-08-13', now)).toBe(1) // hoy cuenta como quedan horas
+    expect(daysUntil('2026-08-20', now)).toBe(8)
+    expect(daysUntil('2026-08-10', now)).toBeLessThan(0)
+  })
+
+  it('clasifica la urgencia', () => {
+    expect(deadlineUrgency(10)).toBe('ok')
+    expect(deadlineUrgency(7)).toBe('warn')
+    expect(deadlineUrgency(3)).toBe('critical')
+    expect(deadlineUrgency(-1)).toBe('expired')
   })
 })

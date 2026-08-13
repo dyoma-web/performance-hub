@@ -3,6 +3,8 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { useToast } from '../components/Toast'
 import Avatar from '../components/Avatar'
+import EvalTracking from '../components/EvalTracking'
+import EvalReminders from '../components/EvalReminders'
 import { assignmentStatusLabel, isLeader, kindLabel, originLabel } from '../lib/eval360'
 import type {
   AssignmentKind,
@@ -34,7 +36,7 @@ export default function AdminEvaluations() {
   const [assignments, setAssignments] = useState<EvaluationAssignment[]>([])
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
-  const [tab, setTab] = useState<'politica' | 'asignaciones'>('politica')
+  const [tab, setTab] = useState<'politica' | 'asignaciones' | 'seguimiento' | 'recordatorios'>('politica')
   // formulario de asignación dirigida (siempre de pares; las de líder
   // se derivan del organigrama y no se crean a mano)
   const [newEvaluator, setNewEvaluator] = useState('')
@@ -64,7 +66,7 @@ export default function AdminEvaluations() {
       supabase.from('eval_policy_overrides').select('*').eq('cycle_id', cycleId),
       supabase.from('evaluation_assignments').select('*').eq('cycle_id', cycleId).order('created_at'),
     ]).then(([pol, ovr, asg]) => {
-      setPolicy((pol.data as CycleEvalPolicy) ?? { cycle_id: cycleId, peer_target: 2, random_enabled: true })
+      setPolicy((pol.data as CycleEvalPolicy) ?? { cycle_id: cycleId, peer_target: 2, random_enabled: true, eval_deadline: null })
       setOverrides((ovr.data as EvalPolicyOverride[]) ?? [])
       setAssignments((asg.data as EvaluationAssignment[]) ?? [])
     })
@@ -100,7 +102,7 @@ export default function AdminEvaluations() {
   async function savePolicy() {
     if (!policy) return
     const { error } = await supabase.from('cycle_eval_policies').upsert(
-      { cycle_id: cycleId, peer_target: policy.peer_target, random_enabled: policy.random_enabled, updated_by: profile!.id },
+      { cycle_id: cycleId, peer_target: policy.peer_target, random_enabled: policy.random_enabled, eval_deadline: policy.eval_deadline, updated_by: profile!.id },
       { onConflict: 'cycle_id' },
     )
     if (error) toast(error.message, 'error')
@@ -226,8 +228,13 @@ export default function AdminEvaluations() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2">
-        {([['politica', 'Política y personas'], ['asignaciones', 'Asignaciones']] as const).map(([key, label]) => (
+      <div className="flex flex-wrap gap-2">
+        {([
+          ['politica', 'Política y personas'],
+          ['asignaciones', 'Asignaciones'],
+          ['seguimiento', 'Seguimiento'],
+          ['recordatorios', 'Recordatorios'],
+        ] as const).map(([key, label]) => (
           <button
             key={key}
             onClick={() => setTab(key)}
@@ -466,6 +473,23 @@ export default function AdminEvaluations() {
             })
           )}
         </>
+      )}
+
+      {tab === 'seguimiento' && (
+        <EvalTracking
+          cycleName={cycles.find((c) => c.id === cycleId)?.name ?? ''}
+          people={people}
+          assignments={assignments}
+          deadline={policy?.eval_deadline ?? cycles.find((c) => c.id === cycleId)?.end_date ?? null}
+        />
+      )}
+
+      {tab === 'recordatorios' && policy && (
+        <EvalReminders
+          cycleId={cycleId}
+          deadline={policy.eval_deadline}
+          onDeadlineChange={(d) => setPolicy({ ...policy, eval_deadline: d })}
+        />
       )}
     </div>
   )

@@ -75,3 +75,28 @@ export function reviewTypeFor(kind: AssignmentKind): 'self' | 'facilitator' | 'p
   if (kind === 'lider') return 'facilitator'
   return 'peer'
 }
+
+/** Días (enteros, techo) que faltan hasta el fin del día de la fecha dada. */
+export function daysUntil(dateStr: string, now: Date = new Date()): number {
+  const target = new Date(dateStr + 'T23:59:59')
+  return Math.ceil((target.getTime() - now.getTime()) / 86_400_000)
+}
+
+export type DeadlineUrgency = 'ok' | 'warn' | 'critical' | 'expired'
+
+/** Urgencia visual de la fecha límite: >7 días ok, 4-7 alerta, ≤3 crítico. */
+export function deadlineUrgency(days: number): DeadlineUrgency {
+  if (days < 0) return 'expired'
+  if (days <= 3) return 'critical'
+  if (days <= 7) return 'warn'
+  return 'ok'
+}
+
+export function deadlineLabel(dateStr: string, now: Date = new Date()): string {
+  const days = daysUntil(dateStr, now)
+  const fecha = new Date(dateStr + 'T00:00:00').toLocaleDateString('es', { day: 'numeric', month: 'long' })
+  if (days < 0) return `El plazo venció el ${fecha}`
+  if (days === 0) return `¡La fecha límite es HOY (${fecha})!`
+  if (days === 1) return `La fecha límite es mañana (${fecha})`
+  return `Fecha límite: ${fecha} — quedan ${days} días`
+}

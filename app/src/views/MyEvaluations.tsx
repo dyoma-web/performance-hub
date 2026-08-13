@@ -3,7 +3,7 @@ import { Link, useOutletContext } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import Avatar from '../components/Avatar'
-import { assignmentStatusLabel, kindLabel, originLabel } from '../lib/eval360'
+import { assignmentStatusLabel, daysUntil, deadlineLabel, deadlineUrgency, kindLabel, originLabel } from '../lib/eval360'
 import type { Cycle, EvaluationAssignment, Profile } from '../types'
 
 /** Bandeja del evaluador: todas las evaluaciones 360 que le fueron asignadas. */
@@ -12,6 +12,7 @@ export default function MyEvaluations() {
   const { cycle } = useOutletContext<{ cycle: Cycle | null }>()
   const [assignments, setAssignments] = useState<EvaluationAssignment[]>([])
   const [people, setPeople] = useState<Profile[]>([])
+  const [deadline, setDeadline] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -25,9 +26,11 @@ export default function MyEvaluations() {
         .neq('status', 'anulada')
         .order('kind'),
       supabase.from('profiles').select('*'),
-    ]).then(([a, p]) => {
+      supabase.from('cycle_eval_policies').select('eval_deadline').eq('cycle_id', cycle.id).maybeSingle(),
+    ]).then(([a, p, pol]) => {
       setAssignments((a.data as EvaluationAssignment[]) ?? [])
       setPeople((p.data as Profile[]) ?? [])
+      setDeadline((pol.data?.eval_deadline as string | null) ?? cycle.end_date)
       setLoading(false)
     })
   }, [profile, cycle])
@@ -85,6 +88,22 @@ export default function MyEvaluations() {
           {pending.length} pendiente(s) · {done.length} enviada(s) — ciclo {cycle.name}
         </p>
       </div>
+
+      {pending.length > 0 && deadline && (() => {
+        const urgency = deadlineUrgency(daysUntil(deadline))
+        const styles = {
+          ok: 'border-slate-200 bg-white text-slate-600',
+          warn: 'border-amber-200 bg-amber-50 text-amber-700',
+          critical: 'border-highlight/30 bg-highlight/10 text-highlight',
+          expired: 'border-highlight/30 bg-highlight/10 text-highlight',
+        }[urgency]
+        return (
+          <p className={`flex items-center gap-2 rounded-2xl border px-4 py-3 text-sm font-bold ${styles}`}>
+            <span className="material-symbols-outlined" aria-hidden="true">{urgency === 'ok' ? 'event' : 'alarm'}</span>
+            {deadlineLabel(deadline)}
+          </p>
+        )
+      })()}
 
       {assignments.length === 0 && (
         <p className="py-12 text-center text-sm text-slate-400">

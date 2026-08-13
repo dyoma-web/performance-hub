@@ -80,7 +80,8 @@ export default function Evaluation360() {
       if (asg.kind === 'auto') {
         const [wq, wa] = await Promise.all([
           supabase.from('wellbeing_questions').select('*').eq('is_active', true).order('sort_order'),
-          supabase.from('wellbeing_answers').select('*').eq('cycle_id', asg.cycle_id).eq('user_id', profile.id),
+          // user_id = evaluatee: permite que admin/TH vean las respuestas al revisar
+          supabase.from('wellbeing_answers').select('*').eq('cycle_id', asg.cycle_id).eq('user_id', asg.evaluatee_id),
         ])
         if (cancelled) return
         setWellbeing((wq.data as WellbeingQuestion[]) ?? [])

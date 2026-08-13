@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { statusLabel, roleLabel } from '../lib/labels'
 import type { Cycle, Role } from '../types'
 import Avatar from './Avatar'
+import NotificationBell from './NotificationBell'
 
 interface NavItem {
   to: string
@@ -182,9 +183,12 @@ export default function Shell() {
               </p>
             )}
           </div>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-bold tracking-wider text-slate-500 uppercase">
-            {roleLabel(profile.role)}
-          </span>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-bold tracking-wider text-slate-500 uppercase">
+              {roleLabel(profile.role)}
+            </span>
+          </div>
         </header>
 
         <div className="view-enter p-4 sm:p-8">

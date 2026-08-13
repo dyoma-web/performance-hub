@@ -3,7 +3,7 @@ import { Link, useOutletContext } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { statusLabel } from '../lib/labels'
-import { kindLabel } from '../lib/eval360'
+import { daysUntil, deadlineLabel, deadlineUrgency, kindLabel } from '../lib/eval360'
 import Avatar from '../components/Avatar'
 import type { Cycle, EvaluationAssignment, Profile, Team } from '../types'
 
@@ -22,6 +22,7 @@ export default function Dashboard() {
   const [team, setTeam] = useState<Team | null>(null)
   const [myProgress, setMyProgress] = useState<{ total: number; enviadas: number } | null>(null)
   const [toEvaluate, setToEvaluate] = useState<AssignmentWithEvaluatee[]>([])
+  const [deadline, setDeadline] = useState<string | null>(null)
 
   useEffect(() => {
     if (!profile?.team_id) return
@@ -48,6 +49,13 @@ export default function Dashboard() {
       .neq('status', 'anulada')
       .order('kind')
       .then(({ data }) => setToEvaluate((data as AssignmentWithEvaluatee[]) ?? []))
+    // Fecha límite de diligenciamiento (política del ciclo o fin del ciclo)
+    supabase
+      .from('cycle_eval_policies')
+      .select('eval_deadline')
+      .eq('cycle_id', cycle.id)
+      .maybeSingle()
+      .then(({ data }) => setDeadline((data?.eval_deadline as string | null) ?? cycle.end_date))
   }, [profile, cycle])
 
   if (!profile) return null
@@ -150,6 +158,23 @@ export default function Dashboard() {
                 </span>
               )}
             </div>
+            {pendingCount > 0 && deadline && (() => {
+              const urgency = deadlineUrgency(daysUntil(deadline))
+              const styles = {
+                ok: 'bg-slate-50 text-slate-600',
+                warn: 'bg-amber-50 text-amber-700',
+                critical: 'bg-highlight/10 text-highlight',
+                expired: 'bg-highlight/10 text-highlight',
+              }[urgency]
+              return (
+                <p className={`mb-3 flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold ${styles}`}>
+                  <span className="material-symbols-outlined text-base" aria-hidden="true">
+                    {urgency === 'ok' ? 'event' : 'alarm'}
+                  </span>
+                  {deadlineLabel(deadline)}
+                </p>
+              )
+            })()}
             {toEvaluate.length === 0 ? (
               <p className="text-xs text-slate-500">Aún no tienes evaluaciones asignadas en este ciclo.</p>
             ) : (

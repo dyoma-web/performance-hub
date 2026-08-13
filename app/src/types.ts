@@ -163,6 +163,37 @@ export interface CycleEvalPolicy {
   cycle_id: string
   peer_target: number
   random_enabled: boolean
+  eval_deadline: string | null
+}
+
+export type RuleKind = 'recordatorio-pendientes' | 'reporte-avance'
+export type RuleCadence = 'diaria' | 'dia-por-medio' | 'semanal' | 'fechas'
+
+export interface NotificationRule {
+  id: string
+  cycle_id: string
+  kind: RuleKind
+  mode: 'auto' | 'manual'
+  cadence: RuleCadence
+  specific_dates: string[]
+  exclude_weekends: boolean
+  exclude_dates: string[]
+  window_start: string | null
+  window_end: string | null
+  message: string | null
+  is_active: boolean
+  last_run_on: string | null
+}
+
+export interface AppNotification {
+  id: string
+  user_id: string
+  type: string
+  title: string
+  body: string | null
+  link: string | null
+  read_at: string | null
+  created_at: string
 }
 
 export interface EvalPolicyOverride {

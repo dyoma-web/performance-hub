@@ -32,6 +32,11 @@ try {
     from evaluation_assignments a join profiles ev on ev.id = a.evaluator_id
     where a.kind = 'lider' and a.status <> 'anulada'
     group by ev.name order by subordinados desc`)
+  try {
+    await q('Jobs pg_cron', `select jobname, schedule, active from cron.job`)
+  } catch {
+    console.log('\npg_cron NO está disponible — las reglas se ejecutan con "Ejecutar ahora" o habilitando la extensión en el dashboard.')
+  }
 } finally {
   await client.end()
 }
