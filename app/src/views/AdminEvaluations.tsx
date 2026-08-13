@@ -35,10 +35,10 @@ export default function AdminEvaluations() {
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [tab, setTab] = useState<'politica' | 'asignaciones'>('politica')
-  // formulario de asignación dirigida
+  // formulario de asignación dirigida (siempre de pares; las de líder
+  // se derivan del organigrama y no se crean a mano)
   const [newEvaluator, setNewEvaluator] = useState('')
   const [newEvaluatee, setNewEvaluatee] = useState('')
-  const [newKind, setNewKind] = useState<'par' | 'lider'>('par')
 
   useEffect(() => {
     if (!canManage) return
@@ -151,7 +151,7 @@ export default function AdminEvaluations() {
     if (newEvaluator === newEvaluatee) return toast('Una persona no puede evaluarse a sí misma aquí (eso es la autoevaluación)', 'error')
     const { data, error } = await supabase
       .from('evaluation_assignments')
-      .insert({ cycle_id: cycleId, evaluator_id: newEvaluator, evaluatee_id: newEvaluatee, kind: newKind, origin: 'manual', created_by: profile!.id })
+      .insert({ cycle_id: cycleId, evaluator_id: newEvaluator, evaluatee_id: newEvaluatee, kind: 'par', origin: 'manual', created_by: profile!.id })
       .select().single()
     if (error) {
       toast(error.message.includes('duplicate') ? 'Esa asignación ya existe en el ciclo' : error.message, 'error')
@@ -163,6 +163,7 @@ export default function AdminEvaluations() {
   }
 
   async function removeAssignment(a: EvaluationAssignment) {
+    if (a.kind !== 'par') return // líder y autoevaluación se rigen por el organigrama
     if (a.status === 'enviada') {
       // No se destruye una evaluación enviada: se anula (queda en auditoría)
       const { error } = await supabase.from('evaluation_assignments').update({ status: 'anulada' }).eq('id', a.id)
@@ -211,7 +212,7 @@ export default function AdminEvaluations() {
       {/* Resumen */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         {[
-          { label: 'Líder → equipo', value: stats.lider },
+          { label: 'Obligatorias (líder)', value: stats.lider },
           { label: 'Autoevaluaciones', value: stats.auto },
           { label: 'Pares', value: stats.par },
           { label: 'Enviadas', value: stats.enviadas },
@@ -283,10 +284,11 @@ export default function AdminEvaluations() {
 
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-100 p-5">
-              <h3 className="text-sm font-extrabold tracking-tight text-slate-900">Personas: familia de rol y metas individuales</h3>
+              <h3 className="text-sm font-extrabold tracking-tight text-slate-900">Distribución de evaluaciones por persona</h3>
               <p className="mt-1 text-xs text-slate-500">
-                La familia define las competencias funcionales que mide su líder. La meta individual (vacía = usa la
-                política general) permite dar más o menos evaluaciones de pares a una persona concreta.
+                Las <strong>obligatorias de líder</strong> salen del organigrama (subordinados directos) y solo cambian
+                si cambia el organigrama. La <strong>meta de pares</strong> (transversales) sale de la política general,
+                o de la meta individual si la defines aquí. El total es la suma de ambas.
               </p>
             </div>
             <div className="overflow-x-auto">
@@ -295,17 +297,23 @@ export default function AdminEvaluations() {
                   <tr className="border-b border-slate-100 text-left text-[10px] font-bold tracking-wider text-slate-400 uppercase">
                     <th className="px-5 py-3">Persona</th>
                     <th className="px-5 py-3">Familia de rol</th>
-                    <th className="px-5 py-3">Lidera equipo</th>
-                    <th className="px-5 py-3">Meta pares (individual)</th>
-                    <th className="px-5 py-3">Pares asignadas</th>
+                    <th className="px-5 py-3">Obligatorias · líder</th>
+                    <th className="px-5 py-3">Meta pares</th>
+                    <th className="px-5 py-3">Total a evaluar</th>
+                    <th className="px-5 py-3">Avance (enviadas)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {people.map((p) => {
                     const ovr = overrides.find((o) => o.user_id === p.id)
-                    const asgCount = assignments.filter(
-                      (a) => a.evaluator_id === p.id && a.kind === 'par' && a.status !== 'anulada').length
+                    const directReports = people.filter((x) => x.manager_id === p.id).length
+                    const mine = assignments.filter((a) => a.evaluator_id === p.id && a.status !== 'anulada')
+                    const liderAsg = mine.filter((a) => a.kind === 'lider')
+                    const parAsg = mine.filter((a) => a.kind === 'par')
                     const target = ovr?.peer_target ?? policy.peer_target
+                    const total = directReports + target
+                    const sent = liderAsg.filter((a) => a.status === 'enviada').length
+                      + parAsg.filter((a) => a.status === 'enviada').length
                     return (
                       <tr key={p.id} className="border-b border-slate-50 hover:bg-slate-50/50">
                         <td className="px-5 py-3">
@@ -327,12 +335,17 @@ export default function AdminEvaluations() {
                             <option value="">Sin familia</option>
                             {families.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
                           </select>
+                          {isLeader(p.id, people) && (
+                            <p className="mt-1 text-[10px] font-semibold text-primary">Lidera — se le miden comp. de liderazgo</p>
+                          )}
                         </td>
                         <td className="px-5 py-3">
-                          {isLeader(p.id, people) ? (
-                            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">Sí — se le miden comp. de liderazgo</span>
+                          {directReports > 0 ? (
+                            <span className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-extrabold text-primary" title={`${directReports} subordinado(s) directo(s) según el organigrama`}>
+                              {directReports}
+                            </span>
                           ) : (
-                            <span className="text-xs text-slate-400">No</span>
+                            <span className="text-xs text-slate-300">0</span>
                           )}
                         </td>
                         <td className="px-5 py-3">
@@ -344,13 +357,23 @@ export default function AdminEvaluations() {
                             value={ovr?.peer_target ?? ''}
                             onChange={(e) => saveOverride(p.id, e.target.value)}
                             aria-label={`Meta de pares de ${p.name}`}
-                            className="w-20 rounded-lg border border-slate-200 px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
+                            className="w-16 rounded-lg border border-slate-200 px-2 py-1.5 text-xs focus:border-primary focus:outline-none"
                           />
+                          {ovr == null && <span className="ml-1.5 text-[10px] text-slate-400">global</span>}
                         </td>
                         <td className="px-5 py-3">
-                          <span className={`text-xs font-bold ${asgCount >= target ? 'text-primary' : 'text-slate-500'}`}>
-                            {asgCount} / {target}
-                          </span>
+                          <span className="text-sm font-extrabold text-slate-800">{total}</span>
+                          <span className="ml-1.5 text-[10px] text-slate-400">= {directReports} líder + {target} pares</span>
+                        </td>
+                        <td className="px-5 py-3">
+                          <div className="text-xs font-bold text-slate-600">
+                            <span className={sent >= liderAsg.length + parAsg.length && sent > 0 ? 'text-primary' : ''}>
+                              {sent} / {liderAsg.length + parAsg.length}
+                            </span>
+                            <span className="ml-1.5 font-semibold text-slate-400">
+                              (L {liderAsg.filter((a) => a.status === 'enviada').length}/{liderAsg.length} · P {parAsg.filter((a) => a.status === 'enviada').length}/{parAsg.length})
+                            </span>
+                          </div>
                         </td>
                       </tr>
                     )
@@ -365,7 +388,11 @@ export default function AdminEvaluations() {
       {tab === 'asignaciones' && (
         <>
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h3 className="mb-3 text-sm font-extrabold tracking-tight text-slate-900">Asignación dirigida (manual)</h3>
+            <h3 className="mb-3 text-sm font-extrabold tracking-tight text-slate-900">Asignación dirigida de pares (manual)</h3>
+            <p className="mb-3 text-xs text-slate-500">
+              Solo se asignan evaluaciones de <strong>pares (transversales)</strong>. Las de líder salen del
+              organigrama y se actualizan automáticamente al cambiarlo.
+            </p>
             <div className="flex flex-wrap items-end gap-3">
               <div>
                 <label htmlFor="na-evaluator" className="mb-1 block text-xs font-bold text-slate-600">Evaluador</label>
@@ -383,17 +410,9 @@ export default function AdminEvaluations() {
                   {people.filter((p) => p.id !== newEvaluator).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </div>
-              <div>
-                <label htmlFor="na-kind" className="mb-1 block text-xs font-bold text-slate-600">Tipo</label>
-                <select id="na-kind" value={newKind} onChange={(e) => setNewKind(e.target.value as 'par' | 'lider')}
-                  className="rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
-                  <option value="par">Par — solo transversales</option>
-                  <option value="lider">Líder — transversales + familia</option>
-                </select>
-              </div>
               <button onClick={addManual}
                 className="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary/20 hover:brightness-105">
-                Asignar
+                Asignar par
               </button>
             </div>
           </div>
@@ -425,7 +444,7 @@ export default function AdminEvaluations() {
                           <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
                             a.status === 'enviada' ? 'bg-primary/10 text-primary' : 'bg-amber-50 text-amber-600'
                           }`}>{assignmentStatusLabel(a.status)}</span>
-                          {a.status !== 'anulada' && a.kind !== 'auto' && (
+                          {a.status !== 'anulada' && a.kind === 'par' && (
                             <button
                               onClick={() => removeAssignment(a)}
                               title={a.status === 'enviada' ? 'Anular (queda en auditoría)' : 'Eliminar asignación'}
@@ -434,6 +453,9 @@ export default function AdminEvaluations() {
                             >
                               <span className="material-symbols-outlined text-base" aria-hidden="true">delete</span>
                             </button>
+                          )}
+                          {a.kind === 'lider' && (
+                            <span className="material-symbols-outlined text-base text-slate-200" title="Obligatoria: solo cambia al modificar el organigrama" aria-label="Obligatoria por organigrama">lock</span>
                           )}
                         </div>
                       )

@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
-import { useOutletContext } from 'react-router-dom'
+import { Link, useOutletContext } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { statusLabel } from '../lib/labels'
-import type { Cycle, Team } from '../types'
+import { kindLabel } from '../lib/eval360'
+import Avatar from '../components/Avatar'
+import type { Cycle, EvaluationAssignment, Profile, Team } from '../types'
 
 const WEIGHT_LABELS: Record<string, { name: string; color: string }> = {
   results: { name: 'Resultados', color: 'bg-primary' },
@@ -12,10 +14,14 @@ const WEIGHT_LABELS: Record<string, { name: string; color: string }> = {
   contribution: { name: 'Contribución al sistema', color: 'bg-slate-400' },
 }
 
+type AssignmentWithEvaluatee = EvaluationAssignment & { evaluatee: Profile | null }
+
 export default function Dashboard() {
   const { profile } = useAuth()
   const { cycle } = useOutletContext<{ cycle: Cycle | null }>()
   const [team, setTeam] = useState<Team | null>(null)
+  const [myProgress, setMyProgress] = useState<{ total: number; enviadas: number } | null>(null)
+  const [toEvaluate, setToEvaluate] = useState<AssignmentWithEvaluatee[]>([])
 
   useEffect(() => {
     if (!profile?.team_id) return
@@ -27,8 +33,29 @@ export default function Dashboard() {
       .then(({ data }) => setTeam(data as Team | null))
   }, [profile?.team_id])
 
+  useEffect(() => {
+    if (!profile || !cycle) return
+    // Progreso ANÓNIMO de mi evaluación (solo conteos, nunca quién evalúa)
+    supabase.rpc('my_evaluation_progress', { p_cycle: cycle.id }).then(({ data }) => {
+      if (data) setMyProgress(data as { total: number; enviadas: number })
+    })
+    // Personas que me asignaron evaluar
+    supabase
+      .from('evaluation_assignments')
+      .select('*, evaluatee:profiles!evaluation_assignments_evaluatee_id_fkey(*)')
+      .eq('cycle_id', cycle.id)
+      .eq('evaluator_id', profile.id)
+      .neq('status', 'anulada')
+      .order('kind')
+      .then(({ data }) => setToEvaluate((data as AssignmentWithEvaluatee[]) ?? []))
+  }, [profile, cycle])
+
   if (!profile) return null
   const firstName = profile.name.split(' ')[0]
+  const pendingCount = toEvaluate.filter((a) => a.status !== 'enviada').length
+  const pct = myProgress && myProgress.total > 0
+    ? Math.round((myProgress.enviadas / myProgress.total) * 100)
+    : 0
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -76,6 +103,87 @@ export default function Dashboard() {
                 </span>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {cycle && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Mi evaluación de desempeño (anónima) */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <h3 className="text-sm font-extrabold tracking-tight text-slate-900">Mi evaluación de desempeño</h3>
+              {myProgress && myProgress.total > 0 && (
+                <span className={`rounded-full px-3 py-1 text-[10px] font-bold ${
+                  pct === 100 ? 'bg-primary/10 text-primary' : 'bg-amber-50 text-amber-600'
+                }`}>
+                  {pct === 100 ? 'Completa' : `${pct}% de completitud`}
+                </span>
+              )}
+            </div>
+            {myProgress == null || myProgress.total === 0 ? (
+              <p className="mt-2 text-xs text-slate-500">
+                Aún no hay evaluaciones asignadas sobre ti en este ciclo.
+              </p>
+            ) : (
+              <>
+                <p className="mt-1 text-xs text-slate-500">
+                  {myProgress.enviadas} de {myProgress.total} evaluaciones sobre ti han sido enviadas.
+                  Recibirás el resultado consolidado de forma <strong>anónima</strong>.
+                </p>
+                <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-slate-100" role="img" aria-label={`Avance de mi evaluación: ${pct}%`}>
+                  <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Personas que debo evaluar */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h3 className="text-sm font-extrabold tracking-tight text-slate-900">Debes evaluar</h3>
+              {toEvaluate.length > 0 && (
+                <span className={`rounded-full px-3 py-1 text-[10px] font-bold ${
+                  pendingCount === 0 ? 'bg-primary/10 text-primary' : 'bg-amber-50 text-amber-600'
+                }`}>
+                  {pendingCount === 0 ? '✓ Todo al día' : `${pendingCount} pendiente(s)`}
+                </span>
+              )}
+            </div>
+            {toEvaluate.length === 0 ? (
+              <p className="text-xs text-slate-500">Aún no tienes evaluaciones asignadas en este ciclo.</p>
+            ) : (
+              <div className="space-y-2">
+                {toEvaluate.map((a) => {
+                  const isSelf = a.kind === 'auto'
+                  const done = a.status === 'enviada'
+                  return (
+                    <div key={a.id} className="flex items-center gap-3 rounded-xl border border-slate-100 px-3 py-2">
+                      {a.evaluatee && <Avatar profile={a.evaluatee} size="h-8 w-8" />}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-bold text-slate-800">
+                          {isSelf ? 'Mi autoevaluación' : a.evaluatee?.name ?? '—'}
+                        </p>
+                        <p className="text-[10px] text-slate-400">{kindLabel(a.kind)}</p>
+                      </div>
+                      {done ? (
+                        <span className="flex items-center gap-1 text-[10px] font-bold text-primary">
+                          <span className="material-symbols-outlined text-sm" aria-hidden="true">check_circle</span>
+                          Enviada
+                        </span>
+                      ) : (
+                        <Link
+                          to={`/evaluar360/${a.id}`}
+                          className="rounded-lg bg-primary px-3 py-1.5 text-[10px] font-bold text-white shadow-sm hover:brightness-105"
+                        >
+                          Evaluar
+                        </Link>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}

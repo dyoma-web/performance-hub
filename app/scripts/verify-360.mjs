@@ -25,6 +25,13 @@ try {
     where p.is_active and p.archived_at is null order by p.name`)
   await q('Usuarios en auth', `select email, created_at::date from auth.users order by created_at`)
   await q('Ciclo activo', `select id, name, status from cycles where status not in ('finalized','archived')`)
+  await q('Asignaciones por tipo/origen', `select c.name as ciclo, a.kind, a.origin, count(*)::int as n
+    from evaluation_assignments a join cycles c on c.id = a.cycle_id
+    group by c.name, a.kind, a.origin order by c.name, a.kind`)
+  await q('Evaluadores líder (obligatorias)', `select ev.name as lider, count(*)::int as subordinados
+    from evaluation_assignments a join profiles ev on ev.id = a.evaluator_id
+    where a.kind = 'lider' and a.status <> 'anulada'
+    group by ev.name order by subordinados desc`)
 } finally {
   await client.end()
 }
