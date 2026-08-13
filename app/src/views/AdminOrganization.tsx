@@ -852,7 +852,7 @@ export default function AdminOrganization() {
               <input value={invForm.email} onChange={(e) => setInvForm({ ...invForm, email: e.target.value })} className={input} placeholder="email@empresa.com *" aria-label="Email" type="email" />
               <input value={invForm.name} onChange={(e) => setInvForm({ ...invForm, name: e.target.value })} className={input} placeholder="Nombre completo" aria-label="Nombre" />
               <select value={invForm.role} onChange={(e) => setInvForm({ ...invForm, role: e.target.value })} className={input} aria-label="Rol de plataforma">
-                {['colaborador', 'facilitador', 'admin', 'invitado'].map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}
+                {['colaborador', 'facilitador', 'talento', 'admin', 'invitado'].map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}
               </select>
               <select value={invForm.position_id} onChange={(e) => setInvForm({ ...invForm, position_id: e.target.value })} className={input} aria-label="Cargo">
                 <option value="">Cargo…</option>

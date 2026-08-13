@@ -4,11 +4,13 @@ export interface ScaleLevel {
   description: string
 }
 
+// Escala de madurez (Estrategia 2026-1): cada número está atado a un
+// nivel de autonomía y dominio, no a una nota genérica.
 export const SCALE: ScaleLevel[] = [
-  { value: 1, label: 'En desarrollo', description: 'Requiere apoyo frecuente; resultados inconsistentes' },
-  { value: 2, label: 'Cumple lo esperado', description: 'Entrega lo acordado con autonomía básica' },
-  { value: 3, label: 'Sólido / Consistente', description: 'Supera expectativas de forma repetida y sostenida' },
-  { value: 4, label: 'Sobresaliente', description: 'Impacto excepcional; eleva al equipo y al sistema' },
+  { value: 1, label: 'Inicial', description: 'Requiere acompañamiento constante y supervisión directa para ejecutar la competencia' },
+  { value: 2, label: 'En desarrollo', description: 'Demuestra el comportamiento de forma parcial o intermitente; necesita apoyo en situaciones complejas' },
+  { value: 3, label: 'Competente', description: 'Ejecuta la competencia de forma autónoma y consistente (estándar esperado para el rol)' },
+  { value: 4, label: 'Sobresaliente', description: 'Supera las expectativas, genera impacto excepcional y actúa como referente o mentor' },
 ]
 
 export const MIN_COMMENT = 30

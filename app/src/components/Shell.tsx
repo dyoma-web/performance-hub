@@ -16,6 +16,7 @@ function navItems(roles: Role[]): NavItem[] {
   const items: NavItem[] = [
     { to: '/', icon: 'dashboard', label: 'Dashboard' },
     { to: '/mi-perfil', icon: 'person', label: 'Mi Perfil' },
+    { to: '/mis-evaluaciones', icon: 'fact_check', label: 'Mis Evaluaciones 360' },
     { to: '/trayectoria', icon: 'history_edu', label: 'Mi Trayectoria' },
     { to: '/competencias', icon: 'radar', label: 'Competencias' },
     { to: '/organigrama', icon: 'lan', label: 'Organigrama' },
@@ -38,8 +39,16 @@ function navItems(roles: Role[]): NavItem[] {
       { to: '/reuniones', icon: 'handshake', label: 'Reuniones 1:1' },
     )
   }
+  if (roles.includes('talento')) {
+    items.push(
+      { to: '/evaluacion-360', icon: 'assignment_ind', label: 'Evaluación 360' },
+      { to: '/reportes', icon: 'assessment', label: 'Reportes' },
+      { to: '/directorio', icon: 'group', label: 'Directorio' },
+    )
+  }
   if (roles.includes('admin')) {
     items.push(
+      { to: '/evaluacion-360', icon: 'assignment_ind', label: 'Evaluación 360' },
       { to: '/ciclos', icon: 'rebase_edit', label: 'Ciclos' },
       { to: '/calibracion', icon: 'tune', label: 'Calibración' },
       { to: '/reportes', icon: 'assessment', label: 'Reportes' },

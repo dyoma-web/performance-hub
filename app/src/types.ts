@@ -1,4 +1,4 @@
-export type Role = 'admin' | 'facilitador' | 'colaborador' | 'invitado'
+export type Role = 'admin' | 'talento' | 'facilitador' | 'colaborador' | 'invitado'
 
 export interface Profile {
   id: string
@@ -16,6 +16,7 @@ export interface Profile {
   hire_date: string | null
   must_change_password: boolean
   archived_at: string | null
+  family_id: string | null
 }
 
 export interface CycleConfig {
@@ -107,6 +108,73 @@ export interface CatalogItem {
   role_type: string | null
   name: string
   description: string
+  sort_order: number
+  is_active: boolean
+}
+
+// ---- Evaluación 360 (Estrategia 2026-1) ----
+
+export interface RoleFamily {
+  id: string
+  key: string
+  name: string
+  description: string | null
+  sort_order: number
+  is_active: boolean
+}
+
+export type CompetencyType = 'organizacional' | 'familia' | 'liderazgo'
+
+export interface CompetencyIndicator {
+  name: string
+  description: string
+}
+
+export interface Competency {
+  id: string
+  code: string
+  comp_type: CompetencyType
+  family_id: string | null
+  name: string
+  definition: string
+  indicators: CompetencyIndicator[]
+  star_question: string | null
+  sort_order: number
+  is_active: boolean
+}
+
+export type AssignmentKind = 'auto' | 'lider' | 'par'
+export type AssignmentOrigin = 'auto' | 'aleatoria' | 'manual'
+export type AssignmentStatus = 'pendiente' | 'en-curso' | 'enviada' | 'anulada'
+
+export interface EvaluationAssignment {
+  id: string
+  cycle_id: string
+  evaluator_id: string
+  evaluatee_id: string
+  kind: AssignmentKind
+  origin: AssignmentOrigin
+  status: AssignmentStatus
+  review_id: string | null
+  created_by: string | null
+}
+
+export interface CycleEvalPolicy {
+  cycle_id: string
+  peer_target: number
+  random_enabled: boolean
+}
+
+export interface EvalPolicyOverride {
+  cycle_id: string
+  user_id: string
+  peer_target: number
+}
+
+export interface WellbeingQuestion {
+  code: string
+  category: string
+  question: string
   sort_order: number
   is_active: boolean
 }

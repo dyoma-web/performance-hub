@@ -25,6 +25,9 @@ const CareerProfile = lazy(() => import('./views/CareerProfile'))
 const Skills360 = lazy(() => import('./views/Skills360'))
 const OrgChart = lazy(() => import('./views/OrgChart'))
 const PersonProfile = lazy(() => import('./views/PersonProfile'))
+const MyEvaluations = lazy(() => import('./views/MyEvaluations'))
+const Evaluation360 = lazy(() => import('./views/Evaluation360'))
+const AdminEvaluations = lazy(() => import('./views/AdminEvaluations'))
 
 function LoadingScreen() {
   return (
@@ -74,6 +77,10 @@ export default function App() {
         <Route path="/competencias" element={<Suspense fallback={<ViewLoading />}><Skills360 /></Suspense>} />
         <Route path="/organigrama" element={<Suspense fallback={<ViewLoading />}><OrgChart /></Suspense>} />
         <Route path="/persona/:userId" element={<Suspense fallback={<ViewLoading />}><PersonProfile /></Suspense>} />
+        {/* Evaluación 360 (Estrategia 2026-1) */}
+        <Route path="/mis-evaluaciones" element={<Suspense fallback={<ViewLoading />}><MyEvaluations /></Suspense>} />
+        <Route path="/evaluar360/:id" element={<Suspense fallback={<ViewLoading />}><Evaluation360 /></Suspense>} />
+        <Route path="/evaluacion-360" element={<Suspense fallback={<ViewLoading />}><AdminEvaluations /></Suspense>} />
         {/* Colaborador */}
         <Route path="/objetivos" element={<Suspense fallback={<ViewLoading />}><Objectives /></Suspense>} />
         <Route path="/mi-evaluacion" element={<Suspense fallback={<ViewLoading />}><SelfReview /></Suspense>} />

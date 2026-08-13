@@ -22,7 +22,8 @@ export function statusLabel(status: string): string {
 
 export function roleLabel(role: string): string {
   const map: Record<string, string> = {
-    admin: 'People Ops',
+    admin: 'Administración',
+    talento: 'Talento Humano',
     facilitador: 'Facilitador',
     colaborador: 'Colaborador',
     invitado: 'Evaluador invitado',

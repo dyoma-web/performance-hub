@@ -15,8 +15,9 @@ describe('statusLabel', () => {
 })
 
 describe('roleLabel', () => {
-  it('traduce los 4 roles RBAC', () => {
-    expect(roleLabel('admin')).toBe('People Ops')
+  it('traduce los 5 roles RBAC', () => {
+    expect(roleLabel('admin')).toBe('Administración')
+    expect(roleLabel('talento')).toBe('Talento Humano')
     expect(roleLabel('facilitador')).toBe('Facilitador')
     expect(roleLabel('colaborador')).toBe('Colaborador')
     expect(roleLabel('invitado')).toBe('Evaluador invitado')

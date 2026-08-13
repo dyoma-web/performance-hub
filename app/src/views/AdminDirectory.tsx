@@ -393,7 +393,7 @@ export default function AdminDirectory() {
         </select>
         <select value={fRole} onChange={(e) => setFRole(e.target.value)} className={filterCls} aria-label="Filtrar por rol">
           <option value="">Rol: todos</option>
-          {(['colaborador', 'facilitador', 'admin', 'invitado'] as Role[]).map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}
+          {(['colaborador', 'facilitador', 'talento', 'admin', 'invitado'] as Role[]).map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}
         </select>
         <select value={fWorkType} onChange={(e) => setFWorkType(e.target.value)} className={filterCls} aria-label="Filtrar por tipo de labor">
           <option value="">Labor: todas</option>
@@ -450,7 +450,7 @@ export default function AdminDirectory() {
           {bulkAction === 'rol' && (
             <select value={bulkTarget} onChange={(e) => setBulkTarget(e.target.value)} className={filterCls} aria-label="Nuevo rol">
               <option value="">Rol…</option>
-              {(['colaborador', 'facilitador', 'admin', 'invitado'] as Role[]).map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}
+              {(['colaborador', 'facilitador', 'talento', 'admin', 'invitado'] as Role[]).map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}
             </select>
           )}
           {bulkAction === 'area' && (
@@ -584,7 +584,7 @@ export default function AdminDirectory() {
                       <span className={fieldLbl}>Rol</span>
                       <select value={p.role} onChange={(e) => update(p.id, { role: e.target.value as Role })} disabled={p.id === profile.id}
                         aria-label={`Rol de ${p.name}`} className={selectCls}>
-                        {(['colaborador', 'facilitador', 'admin', 'invitado'] as Role[]).map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}
+                        {(['colaborador', 'facilitador', 'talento', 'admin', 'invitado'] as Role[]).map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}
                       </select>
                     </div>
                     <div>
