@@ -14,30 +14,27 @@ interface NavItem {
 }
 
 function navItems(roles: Role[]): NavItem[] {
+  // Durante el despliegue de la Evaluación 360 (2026), líderes y personal
+  // operativo solo ven perfil, historial y evaluación. Admin y Talento
+  // Humano ven la plataforma completa.
+  const full = roles.includes('admin') || roles.includes('talento')
   const items: NavItem[] = [
     { to: '/', icon: 'dashboard', label: 'Dashboard' },
     { to: '/mi-perfil', icon: 'person', label: 'Mi Perfil' },
-    { to: '/mis-evaluaciones', icon: 'fact_check', label: 'Mis Evaluaciones 360' },
     { to: '/trayectoria', icon: 'history_edu', label: 'Mi Trayectoria' },
-    { to: '/competencias', icon: 'radar', label: 'Competencias' },
-    { to: '/organigrama', icon: 'lan', label: 'Organigrama' },
+    { to: '/mis-evaluaciones', icon: 'fact_check', label: 'Mis Evaluaciones 360' },
   ]
-  // Multi-rol: el menú es la unión de lo que cada rol habilita
-  if (roles.includes('colaborador')) {
+  if (full) {
     items.push(
+      { to: '/competencias', icon: 'radar', label: 'Competencias' },
+      { to: '/organigrama', icon: 'lan', label: 'Organigrama' },
       { to: '/objetivos', icon: 'flag', label: 'Mis Objetivos' },
       { to: '/mi-evaluacion', icon: 'rate_review', label: 'Mi Evaluación' },
       { to: '/check-in', icon: 'event_available', label: 'Check-in Mensual' },
       { to: '/feedback', icon: 'reviews', label: 'Feedback a Pares' },
-      { to: '/reuniones', icon: 'handshake', label: 'Reunión 1:1' },
-      { to: '/mi-desarrollo', icon: 'trending_up', label: 'Mi Desarrollo' },
-    )
-  }
-  if (roles.includes('facilitador')) {
-    items.push(
-      { to: '/equipo', icon: 'groups', label: 'Mi Equipo' },
-      { to: '/feedback', icon: 'reviews', label: 'Feedback a Pares' },
       { to: '/reuniones', icon: 'handshake', label: 'Reuniones 1:1' },
+      { to: '/mi-desarrollo', icon: 'trending_up', label: 'Mi Desarrollo' },
+      { to: '/equipo', icon: 'groups', label: 'Mi Equipo' },
     )
   }
   if (roles.includes('talento')) {

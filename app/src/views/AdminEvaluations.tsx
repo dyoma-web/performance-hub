@@ -455,29 +455,47 @@ export default function AdminEvaluations() {
                   <div className="divide-y divide-slate-50">
                     {list.map((a) => {
                       const evaluatee = byId.get(a.evaluatee_id)
+                      const deletable = a.status !== 'anulada'
+                        && (a.kind === 'par' || (a.kind === 'lider' && a.origin === 'manual'))
+                      const lockReason = a.kind === 'auto'
+                        ? 'Obligatoria: la autoevaluación no se elimina'
+                        : 'Obligatoria: solo cambia al modificar el organigrama'
                       return (
-                        <div key={a.id} className={`flex flex-wrap items-center gap-3 px-5 py-2.5 ${a.status === 'anulada' ? 'opacity-40' : ''}`}>
-                          <p className="min-w-40 flex-1 text-sm font-semibold text-slate-700">
+                        <div key={a.id} className={`flex items-center gap-2 px-5 py-2.5 ${a.status === 'anulada' ? 'opacity-40' : ''}`}>
+                          <p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-700">
                             {a.kind === 'auto' ? 'Autoevaluación (incluye bienestar)' : evaluatee?.name ?? '—'}
                           </p>
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${KIND_BADGE[a.kind]}`}>{kindLabel(a.kind)}</span>
-                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">{originLabel(a.origin)}</span>
-                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                          {/* Columnas fijas: tipo · origen · estado · acción */}
+                          <span className={`hidden w-32 shrink-0 rounded-full px-2 py-0.5 text-center text-[10px] font-bold sm:block ${KIND_BADGE[a.kind]}`}>
+                            {a.kind === 'lider' && a.origin === 'manual' ? 'Líder excepcional' : kindLabel(a.kind)}
+                          </span>
+                          <span className="hidden w-24 shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-center text-[10px] font-bold text-slate-500 sm:block">
+                            {originLabel(a.origin)}
+                          </span>
+                          <span className={`w-20 shrink-0 rounded-full px-2 py-0.5 text-center text-[10px] font-bold ${
                             a.status === 'enviada' ? 'bg-primary/10 text-primary' : 'bg-amber-50 text-amber-600'
                           }`}>{assignmentStatusLabel(a.status)}</span>
-                          {a.status !== 'anulada' && (a.kind === 'par' || (a.kind === 'lider' && a.origin === 'manual')) && (
-                            <button
-                              onClick={() => removeAssignment(a)}
-                              title={a.status === 'enviada' ? 'Anular (queda en auditoría)' : 'Eliminar asignación'}
-                              aria-label={`Quitar asignación a ${evaluatee?.name}`}
-                              className="rounded-lg p-1.5 text-slate-300 transition-colors hover:bg-highlight/10 hover:text-highlight"
-                            >
-                              <span className="material-symbols-outlined text-base" aria-hidden="true">delete</span>
-                            </button>
-                          )}
-                          {a.kind === 'lider' && a.origin === 'auto' && (
-                            <span className="material-symbols-outlined text-base text-slate-200" title="Obligatoria: solo cambia al modificar el organigrama" aria-label="Obligatoria por organigrama">lock</span>
-                          )}
+                          <span className="flex w-8 shrink-0 justify-center">
+                            {deletable ? (
+                              <button
+                                onClick={() => removeAssignment(a)}
+                                title={a.status === 'enviada' ? 'Anular (queda en auditoría)' : 'Eliminar asignación'}
+                                aria-label={`Quitar asignación a ${evaluatee?.name}`}
+                                className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-highlight/10 hover:text-highlight"
+                              >
+                                <span className="material-symbols-outlined text-base" aria-hidden="true">delete</span>
+                              </button>
+                            ) : (
+                              <button
+                                disabled
+                                title={lockReason}
+                                aria-label={lockReason}
+                                className="cursor-not-allowed rounded-lg p-1.5 text-slate-200"
+                              >
+                                <span className="material-symbols-outlined text-base" aria-hidden="true">lock</span>
+                              </button>
+                            )}
+                          </span>
                         </div>
                       )
                     })}
