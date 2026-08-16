@@ -37,10 +37,13 @@ export default function AdminEvaluations() {
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [tab, setTab] = useState<'politica' | 'asignaciones' | 'seguimiento' | 'recordatorios'>('politica')
-  // formulario de asignación dirigida (siempre de pares; las de líder
-  // se derivan del organigrama y no se crean a mano)
+  // formulario de asignación dirigida: pares, o líder EXCEPCIONAL para
+  // relaciones de evaluación que no existen en el organigrama (ej. el
+  // CINO evalúa al CEO). Las de líder del organigrama siguen siendo
+  // automáticas e intocables.
   const [newEvaluator, setNewEvaluator] = useState('')
   const [newEvaluatee, setNewEvaluatee] = useState('')
+  const [newKind, setNewKind] = useState<'par' | 'lider'>('par')
 
   useEffect(() => {
     if (!canManage) return
@@ -153,7 +156,7 @@ export default function AdminEvaluations() {
     if (newEvaluator === newEvaluatee) return toast('Una persona no puede evaluarse a sí misma aquí (eso es la autoevaluación)', 'error')
     const { data, error } = await supabase
       .from('evaluation_assignments')
-      .insert({ cycle_id: cycleId, evaluator_id: newEvaluator, evaluatee_id: newEvaluatee, kind: 'par', origin: 'manual', created_by: profile!.id })
+      .insert({ cycle_id: cycleId, evaluator_id: newEvaluator, evaluatee_id: newEvaluatee, kind: newKind, origin: 'manual', created_by: profile!.id })
       .select().single()
     if (error) {
       toast(error.message.includes('duplicate') ? 'Esa asignación ya existe en el ciclo' : error.message, 'error')
@@ -165,7 +168,9 @@ export default function AdminEvaluations() {
   }
 
   async function removeAssignment(a: EvaluationAssignment) {
-    if (a.kind !== 'par') return // líder y autoevaluación se rigen por el organigrama
+    // solo pares y líderes excepcionales; las de líder del organigrama y
+    // la autoevaluación se rigen por el organigrama
+    if (!(a.kind === 'par' || (a.kind === 'lider' && a.origin === 'manual'))) return
     if (a.status === 'enviada') {
       // No se destruye una evaluación enviada: se anula (queda en auditoría)
       const { error } = await supabase.from('evaluation_assignments').update({ status: 'anulada' }).eq('id', a.id)
@@ -395,10 +400,11 @@ export default function AdminEvaluations() {
       {tab === 'asignaciones' && (
         <>
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h3 className="mb-3 text-sm font-extrabold tracking-tight text-slate-900">Asignación dirigida de pares (manual)</h3>
+            <h3 className="mb-3 text-sm font-extrabold tracking-tight text-slate-900">Asignación dirigida (manual)</h3>
             <p className="mb-3 text-xs text-slate-500">
-              Solo se asignan evaluaciones de <strong>pares (transversales)</strong>. Las de líder salen del
-              organigrama y se actualizan automáticamente al cambiarlo.
+              <strong>Par</strong>: solo competencias transversales. <strong>Líder excepcional</strong>: úsalo
+              únicamente para relaciones de evaluación que no existen en el organigrama (ej. el CINO evalúa al CEO);
+              las de líder normales salen del organigrama automáticamente.
             </p>
             <div className="flex flex-wrap items-end gap-3">
               <div>
@@ -417,9 +423,17 @@ export default function AdminEvaluations() {
                   {people.filter((p) => p.id !== newEvaluator).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </div>
+              <div>
+                <label htmlFor="na-kind" className="mb-1 block text-xs font-bold text-slate-600">Tipo</label>
+                <select id="na-kind" value={newKind} onChange={(e) => setNewKind(e.target.value as 'par' | 'lider')}
+                  className="rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none">
+                  <option value="par">Par — transversales</option>
+                  <option value="lider">Líder excepcional — transversales + familia</option>
+                </select>
+              </div>
               <button onClick={addManual}
                 className="rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary/20 hover:brightness-105">
-                Asignar par
+                Asignar
               </button>
             </div>
           </div>
@@ -451,7 +465,7 @@ export default function AdminEvaluations() {
                           <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
                             a.status === 'enviada' ? 'bg-primary/10 text-primary' : 'bg-amber-50 text-amber-600'
                           }`}>{assignmentStatusLabel(a.status)}</span>
-                          {a.status !== 'anulada' && a.kind === 'par' && (
+                          {a.status !== 'anulada' && (a.kind === 'par' || (a.kind === 'lider' && a.origin === 'manual')) && (
                             <button
                               onClick={() => removeAssignment(a)}
                               title={a.status === 'enviada' ? 'Anular (queda en auditoría)' : 'Eliminar asignación'}
@@ -461,7 +475,7 @@ export default function AdminEvaluations() {
                               <span className="material-symbols-outlined text-base" aria-hidden="true">delete</span>
                             </button>
                           )}
-                          {a.kind === 'lider' && (
+                          {a.kind === 'lider' && a.origin === 'auto' && (
                             <span className="material-symbols-outlined text-base text-slate-200" title="Obligatoria: solo cambia al modificar el organigrama" aria-label="Obligatoria por organigrama">lock</span>
                           )}
                         </div>
