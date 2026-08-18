@@ -6,6 +6,7 @@ import { statusLabel, roleLabel } from '../lib/labels'
 import type { Cycle, Role } from '../types'
 import Avatar from './Avatar'
 import NotificationBell from './NotificationBell'
+import FeedbackWidget from './FeedbackWidget'
 
 interface NavItem {
   to: string
@@ -42,6 +43,8 @@ function navItems(roles: Role[]): NavItem[] {
       { to: '/evaluacion-360', icon: 'assignment_ind', label: 'Evaluación 360' },
       { to: '/reportes', icon: 'assessment', label: 'Reportes' },
       { to: '/directorio', icon: 'group', label: 'Directorio' },
+      { to: '/buzon', icon: 'forum', label: 'Buzón' },
+      { to: '/auditoria', icon: 'history', label: 'Auditoría' },
     )
   }
   if (roles.includes('admin')) {
@@ -52,6 +55,8 @@ function navItems(roles: Role[]): NavItem[] {
       { to: '/reportes', icon: 'assessment', label: 'Reportes' },
       { to: '/directorio', icon: 'group', label: 'Directorio' },
       { to: '/organizacion', icon: 'account_tree', label: 'Organización' },
+      { to: '/buzon', icon: 'forum', label: 'Buzón' },
+      { to: '/auditoria', icon: 'history', label: 'Auditoría' },
     )
   }
   // dedupe conservando el orden
@@ -192,6 +197,8 @@ export default function Shell() {
           <Outlet context={{ cycle }} />
         </div>
       </main>
+
+      <FeedbackWidget />
     </div>
   )
 }

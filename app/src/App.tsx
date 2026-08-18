@@ -28,6 +28,8 @@ const PersonProfile = lazy(() => import('./views/PersonProfile'))
 const MyEvaluations = lazy(() => import('./views/MyEvaluations'))
 const Evaluation360 = lazy(() => import('./views/Evaluation360'))
 const AdminEvaluations = lazy(() => import('./views/AdminEvaluations'))
+const AdminFeedback = lazy(() => import('./views/AdminFeedback'))
+const AdminAudit = lazy(() => import('./views/AdminAudit'))
 
 function LoadingScreen() {
   return (
@@ -81,6 +83,8 @@ export default function App() {
         <Route path="/mis-evaluaciones" element={<Suspense fallback={<ViewLoading />}><MyEvaluations /></Suspense>} />
         <Route path="/evaluar360/:id" element={<Suspense fallback={<ViewLoading />}><Evaluation360 /></Suspense>} />
         <Route path="/evaluacion-360" element={<Suspense fallback={<ViewLoading />}><AdminEvaluations /></Suspense>} />
+        <Route path="/buzon" element={<Suspense fallback={<ViewLoading />}><AdminFeedback /></Suspense>} />
+        <Route path="/auditoria" element={<Suspense fallback={<ViewLoading />}><AdminAudit /></Suspense>} />
         {/* Colaborador */}
         <Route path="/objetivos" element={<Suspense fallback={<ViewLoading />}><Objectives /></Suspense>} />
         <Route path="/mi-evaluacion" element={<Suspense fallback={<ViewLoading />}><SelfReview /></Suspense>} />

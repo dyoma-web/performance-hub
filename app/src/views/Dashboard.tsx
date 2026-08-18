@@ -219,7 +219,7 @@ export default function Dashboard() {
             rocket_launch
           </span>
           <div>
-            <p className="text-sm font-bold text-slate-800">Beta funcional — usa el menú lateral</p>
+            <p className="text-sm font-bold text-slate-800">Usa el menú lateral</p>
             <p className="mt-1 text-xs leading-relaxed text-slate-600">
               {profile.role === 'colaborador' &&
                 'Define tus objetivos, completa tu autoevaluación, envía check-ins mensuales, responde feedback de pares y sigue tu plan de desarrollo.'}
