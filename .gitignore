@@ -28,3 +28,7 @@ supabase/.temp/
 
 # Matriz con nombres reales de evaluadores: NUNCA al repo publico
 app/scripts/load-matriz-2026.mjs
+
+# Documentos internos (repo publico): nunca versionar
+*.docx
+*.xlsx
