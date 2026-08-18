@@ -28,7 +28,9 @@ export default function Team() {
     if (!profile || !cycle) return
     async function load() {
       const [{ data: members }, { data: all }, { data: reviews }, { data: checkins }] = await Promise.all([
-        supabase.from('profiles').select('*').eq('team_id', profile!.team_id!).neq('id', profile!.id).eq('is_active', true).order('name'),
+        // Equipo = subordinados directos según el organigrama (manager_id),
+        // igual que las asignaciones 360 (antes filtraba por team_id demo)
+        supabase.from('profiles').select('*').eq('manager_id', profile!.id).eq('is_active', true).is('archived_at', null).order('name'),
         supabase.from('profiles').select('*').eq('is_active', true).order('name'),
         supabase.from('reviews').select('*').eq('cycle_id', cycle!.id),
         supabase.from('checkins').select('id,user_id,status').eq('cycle_id', cycle!.id).neq('status', 'draft'),
