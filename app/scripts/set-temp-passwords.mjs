@@ -5,6 +5,9 @@
 // No toca: cuentas que ya han ingresado, cuentas demo (@demo360.co).
 // Imprime el listado correo → contraseña temporal (NO se guarda en el repo).
 // Uso:  SUPABASE_DB_PASSWORD=... node scripts/set-temp-passwords.mjs
+//       (con un correo como argumento, reinicia SOLO esa cuenta aunque
+//        ya haya iniciado sesión):
+//       SUPABASE_DB_PASSWORD=... node scripts/set-temp-passwords.mjs correo@dominio
 import { randomInt } from 'node:crypto'
 import pg from 'pg'
 
@@ -32,16 +35,20 @@ const client = new pg.Client({
 })
 await client.connect()
 try {
+  const onlyEmail = process.argv[2]?.trim().toLowerCase() ?? null
   const { rows: users } = await client.query(
     `select u.id, u.email, p.name, u.last_sign_in_at
      from auth.users u
      join public.profiles p on p.id = u.id
      where p.is_active and p.archived_at is null
        and u.email not like '%@demo360.co'
-     order by p.name`)
+       and ($1::text is null or lower(u.email) = $1)
+     order by p.name`, [onlyEmail])
+  if (onlyEmail && users.length === 0) throw new Error(`No existe cuenta activa con el correo ${onlyEmail}`)
 
-  const skipped = users.filter((u) => u.last_sign_in_at != null)
-  const targets = users.filter((u) => u.last_sign_in_at == null)
+  // Con correo explícito se reinicia aunque ya haya iniciado sesión
+  const skipped = onlyEmail ? [] : users.filter((u) => u.last_sign_in_at != null)
+  const targets = onlyEmail ? users : users.filter((u) => u.last_sign_in_at == null)
 
   await client.query('begin')
   await client.query('alter table public.profiles disable trigger profiles_protect')
