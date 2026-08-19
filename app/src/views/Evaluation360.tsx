@@ -5,7 +5,6 @@ import { supabase } from '../lib/supabase'
 import { useToast } from '../components/Toast'
 import ScaleSelector from '../components/ScaleSelector'
 import Avatar from '../components/Avatar'
-import { itemError } from '../lib/scale'
 import { competenciesForAssignment, kindLabel, reviewTypeFor } from '../lib/eval360'
 import type {
   Competency,
@@ -46,6 +45,7 @@ export default function Evaluation360() {
   const [wellbeing, setWellbeing] = useState<WellbeingQuestion[]>([])
   const [wellbeingAnswers, setWellbeingAnswers] = useState<Record<string, string>>({})
   const [items, setItems] = useState<Record<string, ItemState>>({})
+  const [extra, setExtra] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [loading, setLoading] = useState(true)
@@ -126,11 +126,15 @@ export default function Evaluation360() {
           await supabase.from('evaluation_assignments').update({ review_id: rev.id, status: newStatus }).eq('id', asg.id)
           setAssignment({ ...asg, review_id: rev.id, status: newStatus })
         }
-        const { data: rItems } = await supabase.from('review_items').select('*').eq('review_id', rev.id).eq('block', 'skills')
+        const { data: rItems } = await supabase.from('review_items').select('*').eq('review_id', rev.id)
         if (cancelled) return
         const map: Record<string, ItemState> = {}
         for (const it of rItems ?? []) {
-          map[it.item_ref] = { score: it.score, comment: it.comment ?? '', links: (it.evidence_links ?? []).join(', ') }
+          if (it.block === 'contribution' && it.item_ref === 'adicional') {
+            setExtra(it.comment ?? '')
+          } else if (it.block === 'skills') {
+            map[it.item_ref] = { score: it.score, comment: it.comment ?? '', links: (it.evidence_links ?? []).join(', ') }
+          }
         }
         setItems(map)
       }
@@ -182,29 +186,23 @@ export default function Evaluation360() {
 
   async function save(submit: boolean) {
     if (!review || !assignment) return
-    const errs: Record<string, string> = {}
-    for (const c of scoped) {
-      const st = items[c.code]
-      if (st?.score != null) {
-        const e = itemError(st.score, st.comment, parseLinks(st.links))
-        if (e) errs[c.code] = e
-      } else if (submit) {
-        errs[c.code] = 'Falta calificar esta competencia'
-      }
-    }
-    if (submit && isSelf) {
-      for (const q of wellbeing) {
-        if (!wellbeingAnswers[q.code]?.trim()) errs[q.code] = 'Esta respuesta hace parte de tu mapa de bienestar'
-      }
-    }
-    setErrors(errs)
-    if (Object.keys(errs).length > 0) {
-      toast('Revisa los puntos marcados en rojo', 'error')
+    // Casillas opcionales: solo se exige al menos UNA competencia
+    // calificada para enviar (evita envíos completamente vacíos).
+    if (submit && !scoped.some((c) => items[c.code]?.score != null)) {
+      toast('Califica al menos una competencia antes de enviar', 'error')
       return
     }
+    setErrors({})
     setSaving(true)
     try {
-      const rows = scoped
+      const rows: {
+        review_id: string
+        block: 'skills' | 'contribution'
+        item_ref: string
+        score: number | null
+        comment: string | null
+        evidence_links: string[]
+      }[] = scoped
         .filter((c) => items[c.code] && (items[c.code].score != null || items[c.code].comment.trim()))
         .map((c) => ({
           review_id: review.id,
@@ -214,6 +212,16 @@ export default function Evaluation360() {
           comment: items[c.code].comment.trim() || null,
           evidence_links: parseLinks(items[c.code].links),
         }))
+      if (extra.trim()) {
+        rows.push({
+          review_id: review.id,
+          block: 'contribution',
+          item_ref: 'adicional',
+          score: null,
+          comment: extra.trim(),
+          evidence_links: [],
+        })
+      }
       if (rows.length > 0) {
         const { error } = await supabase.from('review_items').upsert(rows, { onConflict: 'review_id,block,item_ref' })
         if (error) throw new Error(error.message)
@@ -327,7 +335,7 @@ export default function Evaluation360() {
 
                 <div className="mt-3">
                   <label htmlFor={`c-${c.code}`} className="mb-1 block text-xs font-bold text-slate-600">
-                    Cuenta una historia breve (Situación → Acción → Resultado)
+                    Cuenta una historia breve (Situación → Acción → Resultado) <span className="font-semibold text-slate-400">— opcional</span>
                   </label>
                   <textarea
                     id={`c-${c.code}`}
@@ -342,7 +350,7 @@ export default function Evaluation360() {
                 {st.score === 4 && (
                   <div className="mt-2">
                     <label htmlFor={`l-${c.code}`} className="mb-1 block text-xs font-bold text-slate-600">
-                      Evidencia del nivel Sobresaliente (links, separados por coma)
+                      Evidencia del nivel Sobresaliente (links, separados por coma) <span className="font-semibold text-slate-400">— opcional</span>
                     </label>
                     <input
                       id={`l-${c.code}`}
@@ -361,12 +369,29 @@ export default function Evaluation360() {
         </div>
       ))}
 
+      {/* Casilla final abierta: lo que no encaja en las categorías */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <h3 className="text-sm font-extrabold tracking-tight text-slate-900">¿Algo más que agregar?</h3>
+        <p className="mt-1 mb-3 text-xs text-slate-500">
+          Espacio libre y opcional para cualquier elemento que haya faltado o que no encaje en las categorías anteriores.
+        </p>
+        <textarea
+          rows={4}
+          disabled={readonly}
+          value={extra}
+          onChange={(e) => setExtra(e.target.value)}
+          placeholder="Comentarios, contexto o aspectos adicionales…"
+          aria-label="Comentarios adicionales"
+          className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-primary focus:outline-none disabled:bg-slate-50"
+        />
+      </div>
+
       {isSelf && wellbeing.length > 0 && (
         <div className="space-y-4">
           <p className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">Mapa de energía y bienestar</p>
           <p className="rounded-xl bg-primary/5 px-4 py-3 text-xs leading-relaxed text-slate-600">
-            Esta sección no lleva calificación numérica. Tus respuestas alimentan directamente la conversación 1:1
-            con tu líder y ayudan a ajustar cargas a tiempo.
+            Esta sección no lleva calificación numérica y es opcional, pero tus respuestas alimentan directamente la
+            conversación 1:1 con tu líder y ayudan a ajustar cargas a tiempo.
           </p>
           {wellbeing.map((q) => (
             <div key={q.code} className={`rounded-2xl border bg-white p-6 shadow-sm ${errors[q.code] ? 'border-highlight/50' : 'border-slate-200'}`}>
